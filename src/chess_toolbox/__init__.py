@@ -1,0 +1,5 @@
+__project_name__ = """chess_toolbox"""
+__author__ = """Matthieu Daviaud"""
+__email__ = """matthieu.daviaud@gmail.com"""
+__version__ = """0.1.0"""
+description = """Bibliothèque d'outils pour manipuler gérer mes bases Chessbase"""
