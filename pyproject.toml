@@ -14,10 +14,15 @@ license = {text = "MIT"}
 requires-python = ">=3.13"
 dependencies = [
     "beartype>=0.22.9",
+    "beautifulsoup4>=4.13.0",
+    "python-chess>=1.999",
+    "python-dotenv>=1.1.0",
+    "selenium>=4.31.0",
+    "undetected-chromedriver>=3.5.5",
 ]
 
 [project.scripts]
-chess_toolbox = "src.chess_toolbox.__main__:main"
+chess_toolbox = "chess_toolbox.__main__:main"
 
 [project.optional-dependencies]
 dev = [
@@ -30,6 +35,7 @@ docs = [
 lint = [
     "mypy>=1.20.0",
     "ruff>=0.15.10",
+    "types-beautifulsoup4>=4.12.0",
 ]
 
 [tool.ruff]
@@ -82,6 +88,14 @@ skip_empty = true
 [tool.mypy]
 python_version = "3.13"
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["selenium.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["undetected_chromedriver.*"]
+ignore_missing_imports = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chess_toolbox"]
