@@ -1,20 +1,16 @@
-
 # chess_toolbox
 
 Boîte à outils pour manipuler et gérer des bases PGN d'ouvertures d'échecs.
 
-
 ## Authors
 
 - [@mattdav](https://github.com/mattdav)
-
 
 ## Badges
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-
 
 ## Installation
 
@@ -30,7 +26,6 @@ CHROME_PROFILE_DIR=C:/tools/chrome-for-testing/user-data
 CHESSABLE_HTML_CACHE=src/chess_toolbox/data/courses/html/
 CHESSABLE_PGN_CACHE=src/chess_toolbox/data/courses/pgn/
 ```
-
 
 ## Commandes
 
@@ -56,28 +51,26 @@ uv run chess_toolbox extract-chessable -interactive
 
 #### Authentification
 
-**Méthode normale :**
+Le scraping des pages de cours utilise `curl_cffi` (impersonation TLS Chrome)
+plutôt qu'un navigateur automatisé — plus fiable face à Cloudflare.
 
-```bash
-uv run chess_toolbox chessable-login
-```
-
-Une fenêtre Chrome for Testing s'ouvre. Se connecter manuellement, le script
-sauvegarde les cookies et se ferme.
-
-**Si Cloudflare bloque la connexion automatisée :**
+**Première utilisation :**
 
 1. Se connecter à Chessable dans son navigateur habituel (Chrome/Firefox).
 2. Exporter les cookies avec l'extension [Cookie-Editor](https://cookie-editor.com/)
    au format JSON.
-3. Importer dans Chrome for Testing :
+3. Enregistrer les cookies :
 
 ```bash
 uv run chess_toolbox chessable-import-cookies cookies.json
 ```
 
-Les cookies sont sauvegardés dans le profil CfT et réutilisés automatiquement.
+Les cookies sont sauvegardés dans `./chessable_cookies.json` (chemin configurable
+via `CHESSABLE_COOKIES_FILE` dans `.env`). À renouveler quand la session expire
+(typiquement après quelques semaines).
 
+> Les pages de variations utilisent encore Selenium. `chessable-login` reste
+> disponible si CfT fonctionne sur l'environnement cible.
 
 ## Acknowledgements
 
