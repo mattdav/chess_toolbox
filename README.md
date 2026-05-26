@@ -51,26 +51,39 @@ uv run chess_toolbox extract-chessable -interactive
 
 #### Authentification
 
-Le scraping des pages de cours utilise `curl_cffi` (impersonation TLS Chrome)
-plutôt qu'un navigateur automatisé — plus fiable face à Cloudflare.
+Chessable utilise Cloudflare Bot Management. La méthode recommandée est le
+mode **CDP** (Chrome DevTools Protocol) : le script se connecte à Chrome
+normal déjà ouvert, ce qui contourne toute détection.
 
-**Première utilisation :**
-
-1. Se connecter à Chessable dans son navigateur habituel (Chrome/Firefox).
-2. Exporter les cookies avec l'extension [Cookie-Editor](https://cookie-editor.com/)
-   au format JSON.
-3. Enregistrer les cookies :
+**Configuration initiale (une seule fois) :**
 
 ```bash
-uv run chess_toolbox chessable-import-cookies cookies.json
+uv run chess_toolbox chessable-start-browser
 ```
 
-Les cookies sont sauvegardés dans `./chessable_cookies.json` (chemin configurable
-via `CHESSABLE_COOKIES_FILE` dans `.env`). À renouveler quand la session expire
-(typiquement après quelques semaines).
+Une fenêtre Chrome s'ouvre sur la page de connexion Chessable. Se connecter,
+puis ajouter dans `.env` :
 
-> Les pages de variations utilisent encore Selenium. `chessable-login` reste
-> disponible si CfT fonctionne sur l'environnement cible.
+```env
+CHESSABLE_DEBUG_PORT=9222
+```
+
+La session est mémorisée dans le profil dédié (`CHROME_AUTOMATION_PROFILE_DIR`,
+défaut `C:/tools/chrome-automation-profile`). Les runs suivants ne demandent
+plus de connexion manuelle.
+
+**Usage courant :**
+
+Lancer Chrome avec le port de debug, puis démarrer l'export :
+
+```bash
+uv run chess_toolbox chessable-start-browser
+uv run chess_toolbox extract-chessable -courses 12345
+```
+
+> **Variables `.env` optionnelles :**
+> - `CHROME_REGULAR_BINARY_PATH` — chemin vers `chrome.exe` si non détecté automatiquement
+> - `CHROME_AUTOMATION_PROFILE_DIR` — répertoire du profil dédié (défaut : `C:/tools/chrome-automation-profile`)
 
 ## Acknowledgements
 
