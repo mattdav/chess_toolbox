@@ -19,7 +19,6 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "selenium>=4.31.0",
     "setuptools>=82.0.1",
-    "undetected-chromedriver>=3.5.5",
     "curl-cffi>=0.7.0",
 ]
 
@@ -93,10 +92,6 @@ strict = true
 
 [[tool.mypy.overrides]]
 module = ["selenium.*"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["undetected_chromedriver.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
