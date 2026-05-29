@@ -37,7 +37,7 @@ def main() -> None:
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
 
         sys.argv = [sys.argv[0]] + sys.argv[2:]
-        chessable_main()
+        chessable_main()  # type: ignore[no-untyped-call]
         return
 
     # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
@@ -93,7 +93,7 @@ Exemples :
     split_parser = subparsers.add_parser(
         "split-pgn",
         help="Découpe un PGN d'ouvertures en fichiers par variante.",
-        description="Découpe un PGN d'arbre d'ouvertures en fichiers séparés par variante.",
+        description="Découpe un PGN d'ouvertures en fichiers par variante.",
     )
     split_parser.add_argument("pgn_file", help="Fichier PGN source")
     split_parser.add_argument(
@@ -171,7 +171,7 @@ Variables d'environnement (.env) :
         # CommandLine.py lit sys.argv directement — on le remplace par les args
         # de cette sous-commande (en gardant argv[0] comme nom de programme)
         sys.argv = [sys.argv[0]] + (args.chessable_args or [])
-        chessable_main()
+        chessable_main()  # type: ignore[no-untyped-call]
 
 
 if __name__ == "__main__":

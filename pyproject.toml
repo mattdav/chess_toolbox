@@ -98,6 +98,19 @@ ignore_missing_imports = true
 module = ["curl_cffi.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = [
+    "chess_toolbox.bin.chessable_to_pgn.Utilities",
+    "chess_toolbox.bin.chessable_to_pgn.Pgn",
+    "chess_toolbox.bin.chessable_to_pgn.CommandLine",
+    "chess_toolbox.bin.chessable_to_pgn.core",
+    "chess_toolbox.bin.chessable_to_pgn.WebFetch",
+    "chess_toolbox.bin.split_pgn.core",
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = false
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/chess_toolbox"]
 

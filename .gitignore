@@ -140,3 +140,4 @@ uv.lock
 src/chess_toolbox/data/
 src/chess_toolbox/log/
 src/chess_toolbox/config/
+.claude/
