@@ -1,3 +1,10 @@
+---
+type: ProjectDescription
+project: chess_toolbox
+updated: 2026-06-28
+tags: [python, chess]
+---
+
 # chess_toolbox
 
 Boîte à outils pour manipuler et gérer des bases PGN d'ouvertures d'échecs.

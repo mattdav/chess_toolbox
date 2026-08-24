@@ -1,0 +1,189 @@
+
+## Session du 2026-04-20 21:19 — chess_toolbox
+
+**Fichiers modifiés :**
+  - tasks.py
+
+---
+
+## Session du 2026-05-18 20:12 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-18 20:23 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-18 20:37 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-19 07:32 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-19 07:56 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-19 08:03 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-19 08:15 — chess_toolbox
+
+**Fichiers modifiés :**
+  - probe_api.py
+
+---
+
+## Session du 2026-05-19 08:17 — chess_toolbox
+
+**Fichiers modifiés :**
+  - probe_api.py
+
+---
+
+## Session du 2026-05-19 08:19 — chess_toolbox
+
+**Fichiers modifiés :**
+  - probe_api.py
+
+---
+
+## Session du 2026-05-19 08:21 — chess_toolbox
+
+**Fichiers modifiés :**
+  - probe_api.py
+
+---
+
+## Session du 2026-05-26 18:46 — chess_toolbox
+
+**Fichiers modifiés :**
+  - probe_api.py
+
+---
+
+## Session du 2026-05-26 19:00 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-26 19:06 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-26 19:17 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-26 19:27 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/CommandLine.py
+  - src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-26 19:56 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+
+---
+
+## Session du 2026-05-26 20:43 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/CommandLine.py
+  - src/chess_toolbox/bin/chessable_to_pgn/Pgn.py
+  - src/chess_toolbox/bin/chessable_to_pgn/WebFetch.py
+  - src/chess_toolbox/bin/chessable_to_pgn/__init__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+  - src/chess_toolbox/bin/split_pgn/core.py
+
+---
+
+## Session du 2026-05-29 20:34 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/Pgn.py
+
+---
+
+## Phase 0 — 2026-08-24 — chess_toolbox
+
+**Objectif :** rattacher chess_toolbox au template `project_template` via cruft
+(le projet a été créé avant l'existence du template).
+
+**Réalisé :**
+  - Branche `chore/modernisation-template` créée
+  - `cruft link` exécuté (non-interactif, contexte cookiecutter reconstitué) → `.cruft.json`
+  - Rapport de diff template vs projet livré (fichiers absents, divergents, obsolètes)
+
+**Fichiers modifiés :**
+  - .cruft.json (créé)
+
+---
+
+## Phase 1 — 2026-08-24 — chess_toolbox
+
+**Objectif :** scaffolding qualité (pre-commit, CI, commitizen, tâches invoke).
+
+**Réalisé :**
+  - `.pre-commit-config.yaml` : ruff, mypy, markdownlint-cli2, prettier,
+    hooks génériques, commitizen (commit-msg), okflint
+  - `.markdownlint.jsonc`, `.prettierrc`, `.prettierignore`, `.gitattributes` créés
+  - `tasks.py` réécrit : clean, lint (délègue à pre-commit), precommit_install,
+    test, docs, build, release
+  - `.github/workflows/ci.yml` créé (lint/test/commitizen), lint.yml et test.yml supprimés
+  - `pyproject.toml` : section `[tool.commitizen]`, extras dev ajoutés via
+    `uv add --optional dev`
+  - `CHANGELOG.md`, `CONTRIBUTING.md` créés avec frontmatter OKF
+  - Correctifs nécessaires à `uv run inv lint` (zéro erreur) :
+    - override mypy legacy (chessable_to_pgn) : `ignore_errors = true` remplace
+      3 flags partiels qui ne suppriment pas `disallow_incomplete_defs` (hérité
+      de `strict = true`) → voir DECISIONS.md
+    - `okf-base.yaml` : suppression de `status_values: false` sur les types
+      sans propriété `status` déclarée (invalide pour okflint) → voir DECISIONS.md
+    - 4 blocs de code sans langage (MD040) : ajout de `text`
+    - frontmatter OKF minimal ajouté sur 3 docs pré-existants sans frontmatter
+      (dont 2 dans le submodule chessable_to_pgn, non commités ici — cf. Phase 4)
+
+**Fichiers modifiés :** voir commit associé.
+
+---

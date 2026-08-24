@@ -1,0 +1,43 @@
+okf_version: "0.1"
+
+base:
+  name: "chess_toolbox"
+  roots:
+    - path: "."
+      exclude_patterns:
+        - ".venv/**"
+        - "src/**/data/**"
+        - "resources/**"
+  reserved_files:
+    index: "index.md"
+    log: "log.md"
+  status_field: "status"
+  link_resolution:
+    scope: base
+    external_refs: []
+
+profile:
+  date_fields: [created, updated]
+  types:
+    ProjectDescription:
+      required: [type, project]
+      optional: [updated, tags]
+
+    ProjectStandards:
+      required: [type, project]
+      optional: [updated, tags]
+
+    ProjectLifeCycle:
+      required: [type, project, status]
+      optional: [updated, tags]
+      status_values: [active, archived]
+
+    ProjectJournal:
+      required: [type, project]
+      optional: [updated, tags]
+
+hygiene:
+  broken_links: warn
+  split_candidates: warn
+  reserved_files: off
+  unknown_fields: off

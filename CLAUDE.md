@@ -1,3 +1,10 @@
+---
+type: ProjectStandards
+project: chess_toolbox
+updated: 2026-06-28
+tags: [python, chess]
+---
+
 # CLAUDE.md — chess_toolbox (projet racine)
 
 Ce fichier guide Claude Code pour tous les travaux sur le projet `chess_toolbox`.
@@ -7,7 +14,7 @@ Ce fichier guide Claude Code pour tous les travaux sur le projet `chess_toolbox`
 `chess_toolbox` est une boîte à outils CLI d'**utilitaires d'administration** pour les échecs. Elle centralise deux sous-outils accessibles via une interface de commande unique :
 
 | Commande CLI | Module source | Rôle |
-|---|---|---|
+| --- | --- | --- |
 | `uv run chess_toolbox split-pgn` | `bin/split_pgn/` | Découpe un PGN d'ouvertures en fichiers par variante |
 | `uv run chess_toolbox extract-chessable` | `bin/chessable_to_pgn/` | Exporte un cours Chessable au format PGN |
 
@@ -15,7 +22,7 @@ Ce projet ne contient **pas** de logique d'analyse ou de coaching — ces foncti
 
 ## Structure du projet
 
-```
+```text
 chess_toolbox/
 ├── CLAUDE.md                   # Ce fichier
 ├── pyproject.toml              # Dépendances et config outils (ruff, mypy, pytest)
@@ -68,21 +75,25 @@ uv run pytest
 ## Standards de qualité (OBLIGATOIRES)
 
 ### Type hints et beartype
+
 - Toutes les fonctions **publiques** ont des type hints complets
 - Le décorateur `@beartype` est appliqué sur toutes les fonctions publiques
 - `uv run mypy src/` doit passer avec 0 erreur (mode `strict = true`)
 
 ### Linting
+
 - `uv run ruff check src/` doit passer avec 0 warning
 - `uv run ruff format src/` avant tout commit
 - `uv run inv lint` valide les trois vérifications en séquence
 
 ### Tests
+
 - Couverture minimale : 80 % (`fail_under = 80`)
 - Tests unitaires dans `tests/unit/`, tests d'intégration dans `tests/integration/`
 - Les doctests dans les modules sont activés (`--doctest-modules`)
 
 ### Documentation
+
 - Toutes les fonctions publiques ont une docstring au format Google style
 - Les paramètres, retours et exceptions sont documentés
 
@@ -91,7 +102,8 @@ uv run pytest
 La configuration est séparée en deux couches :
 
 ### `.env` — Secrets (jamais dans git)
-```
+
+```text
 STOCKFISH_PATH=C:\...\stockfish.exe
 OPENAI_API_KEY=sk-proj-...
 ANTHROPIC_API_KEY=sk-ant-...
@@ -100,6 +112,7 @@ PLAYER_ELO=1650
 ```
 
 ### `config.yaml` — Paramètres non-sensibles
+
 ```yaml
 chess_coach:
   max_games: 50
@@ -115,6 +128,7 @@ chessable_to_pgn:
 ```
 
 ### `src/chess_toolbox/config/settings.py`
+
 Module centralisé qui charge `.env` via `python-dotenv` et `config.yaml` via `pyyaml`, expose des dataclasses typées pour la configuration de chaque sous-outil.
 
 ## Dépendances externes clés

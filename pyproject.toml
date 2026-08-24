@@ -27,6 +27,10 @@ chess_toolbox = "chess_toolbox.__main__:main"
 
 [project.optional-dependencies]
 dev = [
+    "commitizen>=4.18.0",
+    "invoke>=3.0.3",
+    "okflint>=0.3.1",
+    "pre-commit>=4.6.2",
     "pytest-cov>=7.1.0",
 ]
 docs = [
@@ -107,12 +111,21 @@ module = [
     "chess_toolbox.bin.chessable_to_pgn.WebFetch",
     "chess_toolbox.bin.split_pgn.core",
 ]
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-check_untyped_defs = false
+ignore_errors = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chess_toolbox"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/chess_toolbox/py.typed" = "chess_toolbox/py.typed"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_files = [
+    "pyproject.toml:^version",
+    "src/chess_toolbox/__init__.py:__version__",
+]
+tag_format = "v$version"
+update_changelog_on_bump = true
+major_version_zero = true

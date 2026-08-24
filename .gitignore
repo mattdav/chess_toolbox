@@ -140,4 +140,8 @@ uv.lock
 src/chess_toolbox/data/
 src/chess_toolbox/log/
 src/chess_toolbox/config/
-.claude/
+
+# Claude Code — portée locale uniquement
+.claude/settings.local.json
+# Exception : progress.log doit être versionné (cf. .gitattributes merge=union)
+!.claude/progress.log

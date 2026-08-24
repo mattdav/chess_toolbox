@@ -1,3 +1,10 @@
+---
+type: ProjectStandards
+project: chess_toolbox
+updated: 2026-08-24
+tags: [python, chess]
+---
+
 # CLAUDE.md — split_pgn
 
 Ce fichier guide Claude Code pour les travaux sur le sous-outil `split_pgn`.
@@ -7,6 +14,7 @@ Ce fichier guide Claude Code pour les travaux sur le sous-outil `split_pgn`.
 `split_pgn` découpe un fichier PGN contenant un arbre d'ouvertures en fichiers PGN séparés, un par variante/défense. Il est conçu pour être utilisé avec ChessBase.
 
 Fonctionnalités :
+
 - Navigation dans l'arbre PGN à partir d'une séquence de coups donnée (SAN ou UCI)
 - Découpe à une profondeur configurable
 - Préservation des commentaires, annotations (NAG) et sous-variantes
@@ -26,7 +34,7 @@ uv run python -m chess_toolbox.bin.split_pgn core.py repertoire.pgn --moves "1.e
 
 ## Architecture
 
-```
+```text
 split_pgn/
 ├── CLAUDE.md       # Ce fichier
 ├── __init__.py     # Expose main() et les fonctions publiques clés
@@ -36,7 +44,7 @@ split_pgn/
 ### Fonctions publiques dans `core.py`
 
 | Fonction | Rôle |
-|---|---|
+| --- | --- |
 | `parse_pgn_file(path)` | Lit un fichier PGN et retourne le premier jeu |
 | `san_to_uci_sequence(san_string)` | Convertit une séquence SAN en liste UCI |
 | `follow_moves(game, uci_moves)` | Navigue dans l'arbre jusqu'à la position cible |
@@ -48,7 +56,7 @@ split_pgn/
 
 ### Pipeline d'exécution
 
-```
+```text
 parse_pgn_file()
     → san_to_uci_sequence()   # convertit "--moves" en liste UCI
     → follow_moves()           # navigue jusqu'à la position de départ
@@ -61,12 +69,15 @@ parse_pgn_file()
 ## Points d'attention
 
 ### Compatibilité ChessBase
+
 Le FEN de départ est inséré dans les headers du PGN via `new_game.setup(board_at_node)`. Ceci est essentiel pour que ChessBase accepte les fichiers. Ne pas retirer cette ligne.
 
 ### Gestion des coups illisibles
+
 `san_to_uci_sequence()` essaie d'abord de parser le token comme UCI, puis comme SAN. En cas d'échec, il lève `ValueError` avec un message clair.
 
 ### Nommage des fichiers de sortie
+
 `safe_filename()` remplace les espaces par `_` et supprime les caractères non-alphanumériques pour garantir la compatibilité multi-OS. Le résultat peut différer du label SAN (ex: `1.e4_c5_Sicilienne.pgn`).
 
 ## Configuration (depuis config.yaml)
