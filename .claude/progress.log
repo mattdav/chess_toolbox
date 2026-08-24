@@ -217,3 +217,30 @@
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Phase 2bis — 2026-08-24 — chess_toolbox
+
+**Objectif :** faire entrer le chantier lui-même, et l'incident du cache HTML
+empoisonné, dans le corpus documentaire OKF.
+
+**Réalisé :**
+  - `docs/specs/SPEC-alignement-template.md` (status: accepted) : cadrage
+    du chantier de modernisation (périmètre inclus/exclu, critères
+    d'acceptation par phase)
+  - `docs/specs/SPEC-session-chessable.md` (status: accepted) : besoin de
+    détection fiable de l'expiration de session Chessable
+  - `docs/fixes/FIX-cache-html-empoisonne.md` (severity: major,
+    status: fixed) : incident du 2026-08-24 (cache HTML rejouant une page
+    publique sans chapitre), correctif opérationnel déjà appliqué, résolution
+    durable renvoyée à la Phase 4d
+  - `docs/plans/PLAN-modernisation.md` (status: active,
+    implements: SPEC-alignement-template) : transposition des 5 phases,
+    Phases 0 à 2 marquées réalisées
+  - `log.md` racine renseigné avec les entrées correspondantes
+  - Vérification : `uv run okflint validate --manifest okf-base.yaml .`
+    → 0 erreur, 12 warnings (hygiène pré-existante + S202 attendu sur les
+    nouveaux documents structurés, aucun lien cassé entre eux)
+
+**Fichiers modifiés :** voir commit associé.
+
+---
