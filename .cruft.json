@@ -1,0 +1,21 @@
+{
+  "template": "https://github.com/mattdav/project_template",
+  "commit": "fb3c059666a457e026a19b0c4910b8b62ad1795d",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "chess_toolbox",
+      "author": "Matthieu Daviaud",
+      "email": "matthieu.daviaud@gmail.com",
+      "description": "Bibliothèque d'outils pour manipuler et gérer mes bases Chessbase",
+      "version": "0.1.0",
+      "license": "MIT license",
+      "publish_pypi": "no",
+      "use_wiki": "no",
+      "_python_version": "3.13",
+      "_template": "https://github.com/mattdav/project_template",
+      "_commit": "fb3c059666a457e026a19b0c4910b8b62ad1795d"
+    }
+  },
+  "directory": null
+}
