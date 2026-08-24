@@ -47,3 +47,19 @@ façon être une liste de chaînes, pas un booléen.
 contrôlé, ce qui est correct puisque la propriété n'existe pas pour eux).
 Seul `ProjectLifeCycle` (qui déclare `status` en required) garde
 `status_values: [active, archived]`.
+
+## 2026-08-24 — `okf-base.yaml` : `type` gardé en `required` sur Command/Spec/Fix/Plan (divergence du template)
+
+Le template déclare ces 4 nouveaux types sans `type` dans `required` (ex.
+`Spec: required: [id, title, description, status, timestamp, perimeter]`),
+alors que les 4 types déjà présents dans le projet (`ProjectDescription`,
+`ProjectStandards`, `ProjectLifeCycle`, `ProjectJournal`) l'exigent tous.
+Les modèles copiés (`docs/_templates/spec.md`, `fix.md`, `plan.md`, et
+`.claude/commands/doc-new.md` côté template) portent pourtant bien un champ
+`type: Spec` / `type: Fix` / `type: Plan` / `type: Command` en frontmatter.
+
+**Décision :** garder `type` en `required` sur les 4 nouveaux types, pour
+rester cohérent avec la convention déjà en place dans ce projet plutôt que de
+suivre le template au pied de la lettre. `hygiene.unknown_fields: off`
+rendait les deux options valides sans erreur okflint ; le choix est une
+question de cohérence interne, pas de contrainte technique.

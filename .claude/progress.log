@@ -187,3 +187,33 @@
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Phase 2 — 2026-08-24 — chess_toolbox
+
+**Objectif :** documentation et conformité OKF (alignement sur le template).
+
+**Réalisé :**
+  - `git mv docs/source docs/code` ; `conf.py` adapté (sys.path vers `src/`,
+    extensions napoleon/viewcode/sphinx_autodoc_typehints) ; `index.rst`
+    adapté pour inclure `api/`
+  - `docs/index.md`, `docs/specs/`, `docs/fixes/`, `docs/plans/` (avec
+    `.gitkeep`) et `docs/_templates/` (`spec.md`, `fix.md`, `plan.md`) créés
+  - `index.md` et `log.md` créés à la racine (fichiers réservés OKF)
+  - `okf-base.yaml` : ajout des types `Command`, `Spec`, `Fix`, `Plan` au
+    profil, avec `type` en `required` sur les 4 nouveaux types pour rester
+    cohérent avec les 4 types déjà présents (divergence assumée par rapport
+    au template — voir DECISIONS.md) ; `exclude_patterns` du projet
+    (`src/**/data/**`, `resources/**`) conservés
+  - `.gitignore` : ajout de `docs/build/` et `docs/code/api/` (générés)
+  - Correctif nécessaire à `uv run inv docs` : `sphinx-autodoc-typehints`
+    manquait dans l'extra `docs` de `pyproject.toml` (présent dans `conf.py`
+    suite à l'alignement mais jamais ajouté aux dépendances)
+  - Vérifications : `uv run okflint validate --manifest okf-base.yaml .`
+    → 0 erreur, 8 warnings (hygiène pré-existante, S202/L002) ; `uv run inv
+    docs` → build réussi, 4 warnings non bloquants (docstrings du submodule
+    chessable_to_pgn, hors périmètre) ; HTML généré dans
+    `docs/build/html/index.html`
+
+**Fichiers modifiés :** voir commit associé.
+
+---

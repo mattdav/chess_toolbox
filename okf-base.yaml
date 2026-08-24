@@ -36,6 +36,28 @@ profile:
       required: [type, project]
       optional: [updated, tags]
 
+    Command:
+      required: [type, description]
+      optional: [argument-hint]
+
+    Spec:
+      required: [type, id, title, description, status, timestamp, perimeter]
+      optional: [tags, audience, superseded-by, work-item]
+      status_values: [draft, accepted, implemented, superseded]
+
+    Fix:
+      required:
+        [type, id, title, description, status, severity, timestamp, perimeter]
+      optional: [tags, audience, work-item]
+      status_values: [draft, confirmed, fixed, wontfix]
+      severity_values: [blocker, major, minor]
+
+    Plan:
+      required:
+        [type, id, title, description, status, implements, timestamp, perimeter]
+      optional: [tags, audience]
+      status_values: [draft, active, done, deprecated]
+
 hygiene:
   broken_links: warn
   split_candidates: warn
