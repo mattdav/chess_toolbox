@@ -334,3 +334,74 @@ lié à curl_cffi.
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Session du 2026-08-25 08:50 — chess_toolbox
+
+**Fichiers modifiés :**
+  - docs/code/conf.py
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - src/chess_toolbox/config/settings.py
+  - src/chess_toolbox/utils.py
+  - tasks.py
+
+---
+
+## Phase 4b — 2026-08-25 — chess_toolbox
+
+**Objectif :** typer strictement les 5 modules `chessable_to_pgn` renommés
+en Phase 4a (type hints complets, `@beartype`, docstrings Google), convertir
+les constantes de mode en `enum.Enum`, et retirer l'exemption mypy legacy.
+
+**Réalisé (délégué à un sous-agent `python-implementer`, relu et vérifié
+avant commit) :**
+  - Type hints complets + `@beartype` + docstrings Google sur `utilities.py`,
+    `command_line.py`, `pgn_writer.py`, `core.py`, `web_fetch.py`
+  - Erreurs mypy `Tag | NavigableString | None` / `str | list[str]`
+    (retours BeautifulSoup) corrigées via deux helpers privés `_as_tag()` /
+    `_attr_str()` dans `web_fetch.py` (narrowing avec `ValueError` explicite,
+    pas de `# type: ignore`)
+  - `WebFetch.FETCH_NEW/FETCH_ALL/FETCH_NONE` → `enum.Enum FetchMode`
+    (web_fetch.py) ; `Pgn.PGN_NONE/PGN_INCREMENTAL/PGN_AFTER` →
+    `enum.Enum PgnMode` (pgn_writer.py) ; tous les points d'usage
+    (command_line.py, core.py, web_fetch.py, pgn_writer.py) mis à jour
+  - `pyproject.toml` : bloc `[[tool.mypy.overrides]]` scindé — les 5 entrées
+    `chessable_to_pgn.*` retirées de l'exemption ; `split_pgn.core` isolé
+    dans son propre bloc (dette pré-existante hors périmètre, voir
+    DECISIONS.md)
+  - Deux bugs latents corrigés (révélés par le typage, comportement
+    inchangé en usage normal) : `command_line.py` référençait `Utilities`
+    (majuscule, `NameError` en mode interactif) au lieu du module
+    `utilities` importé ; `Pgn.isTerminator()` retournait `""` au lieu de
+    `False` quand son argument est `None` (tous les appelants l'utilisent
+    en contexte booléen, sans impact observé)
+  - `src/chess_toolbox/__main__.py` : deux commentaires
+    `# type: ignore[no-untyped-call]` devenus obsolètes retirés
+    (conséquence mécanique du typage de `core.main()`)
+  - Vérifié indépendamment (relecture des diffs + ré-exécution, pas
+    seulement le rapport du sous-agent) : `uv run inv lint` → 0 erreur ;
+    `grep chessable_to_pgn pyproject.toml` → plus aucune entrée de module
+    dans le bloc `ignore_errors` ; `uv run chess_toolbox extract-chessable
+    -courses 5193` → comportement identique (cours trouvé, 16 chapitres,
+    variations comptées, `--- complete ---`)
+  - Commit submodule isolé aux 5 fichiers touchés par la Phase 4b
+
+**Points signalés (hors périmètre, non corrigés) :**
+  - `split_pgn.core` reste sans type hints (dette pré-existante,
+    désormais isolée dans son propre override mypy — voir DECISIONS.md)
+  - `Pgn.PGN_WRITE_KEY_MOVE` (attribut de classe positionné par `-key`/
+    `-nokey` dans `command_line.py`) est distinct du global de module
+    `PGN_WRITE_KEY_MOVE` réellement lu dans `buildMoveBody` — les flags
+    `-key`/`-nokey` semblent déjà inopérants avant cette tâche (typage
+    ajouté sans changer le comportement)
+  - Points hors périmètre déjà signalés en Phase 4a, toujours non corrigés
+    (`__init__.py` non versionné du submodule, `ReadMe.md`/
+    `chessable-to-pgn.py`/`img.png` non liés, épilogue `CHROME_*` obsolète)
+
+**Fichiers modifiés :** voir commit associé.
+
+---

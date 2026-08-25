@@ -37,7 +37,7 @@ def main() -> None:
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
 
         sys.argv = [sys.argv[0]] + sys.argv[2:]
-        chessable_main()  # type: ignore[no-untyped-call]
+        chessable_main()
         return
 
     # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
@@ -157,7 +157,7 @@ Variables d'environnement (.env) :
         # CommandLine.py lit sys.argv directement — on le remplace par les args
         # de cette sous-commande (en gardant argv[0] comme nom de programme)
         sys.argv = [sys.argv[0]] + (args.chessable_args or [])
-        chessable_main()  # type: ignore[no-untyped-call]
+        chessable_main()
 
 
 if __name__ == "__main__":

@@ -100,14 +100,10 @@ module = ["selenium.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = [
-    "chess_toolbox.bin.chessable_to_pgn.utilities",
-    "chess_toolbox.bin.chessable_to_pgn.pgn_writer",
-    "chess_toolbox.bin.chessable_to_pgn.command_line",
-    "chess_toolbox.bin.chessable_to_pgn.core",
-    "chess_toolbox.bin.chessable_to_pgn.web_fetch",
-    "chess_toolbox.bin.split_pgn.core",
-]
+# split_pgn.core est une dette pré-existante hors périmètre (aucun type hint
+# aujourd'hui) — isolé dans son propre bloc pour ne pas exempter les modules
+# chessable_to_pgn, désormais typés strictement.
+module = ["chess_toolbox.bin.split_pgn.core"]
 ignore_errors = true
 
 [tool.hatch.build.targets.wheel]

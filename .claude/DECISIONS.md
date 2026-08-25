@@ -110,3 +110,23 @@ supprimé) reste non commité, comme pour la Phase 3.
 de la Phase 4a proprement dite, d'éventuelles modifications antérieures déjà
 présentes dans les fichiers renommés. Aucune n'a été identifiée comme
 fonctionnellement significative lors de la relecture des diffs avant commit.
+
+## 2026-08-25 — Scission du bloc `[[tool.mypy.overrides]]` : `split_pgn.core` isolé
+
+Le bloc `ignore_errors = true` exemptait à la fois les 5 modules
+`chessable_to_pgn.*` (cible de la Phase 4b) et `chess_toolbox.bin.split_pgn.core`,
+qui n'a aucun rapport avec ce chantier. Or `split_pgn.core` n'a lui-même
+aujourd'hui aucun type hint, alors que son propre `CLAUDE.md`
+(`src/chess_toolbox/bin/split_pgn/CLAUDE.md`) exige `@beartype`, mypy strict
+et docstrings Google — typer les 5 modules `chessable_to_pgn.*` sans isoler
+`split_pgn.core` aurait fait échouer `uv run inv lint` sur un module hors
+périmètre.
+
+**Décision :** scinder en deux blocs `[[tool.mypy.overrides]]` distincts.
+Les 5 entrées `chessable_to_pgn.*` sont retirées de l'exemption (typage
+réalisé, cf. Phase 4b) ; `split_pgn.core` reste seul dans un bloc dédié,
+avec un commentaire signalant qu'il s'agit d'une dette pré-existante hors
+périmètre, à traiter dans un chantier séparé si besoin.
+
+**Conséquence :** `split_pgn.core` reste non typé et non couvert par mypy
+strict — dette technique documentée mais non résorbée ici.

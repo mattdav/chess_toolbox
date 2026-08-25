@@ -64,7 +64,7 @@ chacune vérifiée avant d'enchaîner sur la suivante.
 - Vérification : `uv run inv lint` passe, `uv run chess_toolbox
   extract-chessable -courses 5193` fonctionne à l'identique.
 
-### 4a. Renommages `chessable_to_pgn`
+### 4a. Renommages `chessable_to_pgn` — réalisé
 
 - Fichiers cibles : `WebFetch.py`, `CommandLine.py`, `Utilities.py`, `Pgn.py`,
   `ConfigData.py`, `chessable_cookies.json`, `pyproject.toml`.
@@ -74,7 +74,7 @@ chacune vérifiée avant d'enchaîner sur la suivante.
 - Vérification : `uv run chess_toolbox extract-chessable -courses 5193`
   fonctionne à l'identique, aucun changement de comportement.
 
-### 4b. Typage `chessable_to_pgn`
+### 4b. Typage `chessable_to_pgn` — réalisé
 
 - Fichiers cibles : `web_fetch.py`, `pgn_writer.py`, `command_line.py`,
   `utilities.py`, `core.py`, `pyproject.toml`.
