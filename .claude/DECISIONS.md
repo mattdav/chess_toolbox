@@ -130,3 +130,49 @@ périmètre, à traiter dans un chantier séparé si besoin.
 
 **Conséquence :** `split_pgn.core` reste non typé et non couvert par mypy
 strict — dette technique documentée mais non résorbée ici.
+
+## 2026-08-25 — Phase 4c : `ChessableFetcher` + `WindowMode.OFFSCREEN` plutôt que headless seul
+
+`core.py` reste explicitement hors périmètre Phase 4c (il ne fait qu'appeler
+`command_line.processCommandLineParams()` et l'API `WebFetch`/`Pgn`, dont
+aucune signature externe n'a changé). Un seul navigateur par run est donc
+obtenu en encapsulant le cycle de vie Firefox dans un gestionnaire de
+contexte (`ChessableFetcher`, ajouté à `web_fetch.py`) plutôt qu'en modifiant
+`core.py` : `WebFetch.browser` (nouveau `ClassVar`, même pattern que
+`doFetch`) est construit une fois dans `ChessableFetcher.__enter__` et
+réutilisé par `loadHtmlFromWeb` pour tous les fetches (y compris les 3
+tentatives de retry, qui ne reconstruisaient auparavant plus le navigateur à
+chaque essai). Les deux points d'appel de `chessable_main()` dans
+`src/chess_toolbox/__main__.py` sont enveloppés dans
+`with ChessableFetcher():`.
+
+`CHESSABLE_WINDOW_MODE` (enum `WindowMode` dans `config/settings.py`,
+remplace `CHESSABLE_HEADLESS`) introduit un troisième mode `offscreen`, en
+plus de `headless`/`visible` : une fenêtre Firefox réelle (pas
+`--headless`), déplacée hors de tout écran via
+`browser.set_window_position(-32000, -32000)` après construction. Choisi
+comme défaut car il conserve la même empreinte réseau/rendu que `visible`
+(donc la même résistance à la détection Cloudflare Bot Management, cf. note
+historique dans `.env` sur le risque de redirection silencieuse en mode
+headless — voir aussi `[[lesson]]` correspondante dans `LESSONS.md`) tout en
+restant invisible pour l'utilisateur, contrairement à `headless` qui cumule
+les deux inconvénients (rendu différent + toujours une fenêtre invisible).
+
+**Réécriture `command_line.py` en `argparse`** : flags legacy à un tiret
+conservés à l'identique (choix utilisateur explicite), via
+`parser.parse_known_args()` pour préserver le comportement "avertir et
+continuer" sur un token inconnu (pas de `SystemExit`). Point non couvert par
+défaut par `argparse` : un flag à valeur (ex. `-web`) sans token suivant lève
+normalement `SystemExit(2)` (comportement différent de l'ancien parsing
+manuel, qui retournait proprement `(None, None, None)`). Corrigé via
+`exit_on_error=False` sur le constructeur `ArgumentParser` +
+`try/except argparse.ArgumentError` autour de `parse_known_args()`, détecté
+par relecture indépendante du code du sous-agent (pas par ses propres tests)
+puis confirmé par reproduction directe (`sys.argv=['prog','-web']` levait
+`SystemExit 2` avant fix, retourne `(None, None, None)` après).
+
+**Conséquence :** `-variations` isolées utilisent toujours `courseId =
+"one-off"` comme placeholder de cache (comportement pré-existant de
+`core.py`, non modifié) — void `[[lesson]]` "cache toujours sous
+`course/one-off/`" dans `LESSONS.md` pour le piège associé, découvert lors
+du test comparatif des 3 modes.

@@ -405,3 +405,76 @@ avant commit) :**
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Session du 2026-08-25 13:40 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/utilities.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - src/chess_toolbox/config/settings.py
+
+---
+
+## Session du 2026-08-25 13:40 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+
+---
+
+## Phase 4c — 2026-08-25 — chess_toolbox
+
+**Objectif :** réécrire `WebFetch` pour n'ouvrir qu'une seule fenêtre Firefox
+par run (au lieu d'une par fetch/retry), remplacer le parsing manuel de
+`command_line.py` par `argparse`, et introduire `CHESSABLE_WINDOW_MODE`
+(`offscreen`/`headless`/`visible`) en remplacement de `CHESSABLE_HEADLESS`.
+
+**Réalisé :**
+  - `ChessableFetcher` : gestionnaire de contexte ajouté à `web_fetch.py`,
+    construit `WebFetch.browser` (nouveau `ClassVar`) une fois dans
+    `__enter__`, fermé dans `__exit__` ; `loadHtmlFromWeb` réutilise ce
+    navigateur pour tous les fetches, y compris les 3 tentatives de retry
+    (qui reconstruisaient auparavant un navigateur à chaque essai). Les
+    deux points d'appel de `chessable_main()` dans
+    `src/chess_toolbox/__main__.py` enveloppés dans `with ChessableFetcher():`
+  - `command_line.py` réécrit en `argparse` (`parser.parse_known_args()`
+    pour préserver le comportement "avertir et continuer" sur un token
+    inconnu) ; flags legacy à un tiret conservés à l'identique
+  - Bug introduit par la réécriture argparse détecté et corrigé par
+    relecture indépendante (pas par les tests du sous-agent) : un flag à
+    valeur sans token suivant (ex. `-web` seul) levait `SystemExit(2)` au
+    lieu de retourner `(None, None, None)` comme l'ancien parsing manuel —
+    fix via `exit_on_error=False` + `try/except argparse.ArgumentError`
+  - `WindowMode` (enum, `config/settings.py`) : trois valeurs, `offscreen`
+    par défaut (fenêtre réelle repositionnée hors écran via
+    `browser.set_window_position(-32000, -32000)`, même empreinte
+    réseau/rendu que `visible` donc même résistance à la détection
+    Cloudflare Bot Management, mais invisible pour l'utilisateur)
+  - `.env` et `.env.example` migrés de `CHESSABLE_HEADLESS` vers
+    `CHESSABLE_WINDOW_MODE`
+  - Régression trouvée à la relecture indépendante de `web_fetch.py` :
+    `_warn_session_expired` référençait encore `CHESSABLE_HEADLESS` dans un
+    message utilisateur — corrigé
+  - Vérifié indépendamment : `uv run inv lint` → 0 erreur ; test comparatif
+    empirique des 3 modes sur les 24 variations du chapitre 0 du cours 5193
+    (`-variations` + `-web all`, un run par mode) → fonctionnellement
+    identiques (24/24 OK), `offscreen` retenu comme défaut (voir tableau et
+    analyse dans `LESSONS.md`)
+  - Piège découvert pendant le test (hors périmètre Phase 4c, `core.py` non
+    modifié) : `-variations` isolées mettent toujours en cache sous
+    `course/one-off/variation/<id>.html`, jamais sous le dossier du cours
+    réel — documenté dans `LESSONS.md`
+
+**Points signalés (hors périmètre, non corrigés) :**
+  - `core.py` : `processBatch` fixe `courseId = "one-off"` pour toute
+    variation passée via `-variations`, quel que soit le cours réel — non
+    corrigé, hors périmètre Phase 4c
+
+**Fichiers modifiés :** voir commit associé.
+
+---

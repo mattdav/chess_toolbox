@@ -35,9 +35,11 @@ def main() -> None:
     # qui entre en conflit avec le parsing argparse des arguments optionnels.
     if len(sys.argv) > 1 and sys.argv[1] == "extract-chessable":
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import ChessableFetcher
 
         sys.argv = [sys.argv[0]] + sys.argv[2:]
-        chessable_main()
+        with ChessableFetcher():
+            chessable_main()
         return
 
     # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
@@ -153,11 +155,13 @@ Variables d'environnement (.env) :
 
     elif args.command == "extract-chessable":
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import ChessableFetcher
 
         # CommandLine.py lit sys.argv directement — on le remplace par les args
         # de cette sous-commande (en gardant argv[0] comme nom de programme)
         sys.argv = [sys.argv[0]] + (args.chessable_args or [])
-        chessable_main()
+        with ChessableFetcher():
+            chessable_main()
 
 
 if __name__ == "__main__":

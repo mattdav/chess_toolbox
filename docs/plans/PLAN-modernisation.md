@@ -82,7 +82,7 @@ chacune vérifiée avant d'enchaîner sur la suivante.
   mode en `enum.Enum`, suppression du bloc `[[tool.mypy.overrides]]`.
 - Vérification : `uv run inv lint` passe à zéro sans exemption mypy.
 
-### 4c. Réécriture de `WebFetch`
+### 4c. Réécriture de `WebFetch` — réalisé
 
 - Fichiers cibles : `web_fetch.py`, `command_line.py`,
   `src/chess_toolbox/__main__.py`, `config/settings.py`, `.env.example`.
@@ -109,7 +109,7 @@ chacune vérifiée avant d'enchaîner sur la suivante.
       Phase 4 terminée
 - [ ] Statut de `SPEC-session-chessable` passé à `implemented` une fois la
       Phase 4d terminée
-- [ ] `.env.example` documenté pour `CHESSABLE_WINDOW_MODE` (Phase 4c)
+- [x] `.env.example` documenté pour `CHESSABLE_WINDOW_MODE` (Phase 4c)
 
 ## Vérification finale
 
