@@ -89,3 +89,24 @@ fichier touché par la Phase 3), en laissant les autres fichiers du submodule
 dans leur état non commité — même logique que pour les fichiers non liés du
 dépôt parent (cf. Phase 2). Le pointeur de submodule mis à jour dans le
 dépôt parent ne référence donc que ce commit ciblé.
+
+## 2026-08-25 — Commit Phase 4a dans le submodule : état courant plutôt que stash
+
+Les renommages `git mv` de la Phase 4a (`CommandLine.py`, `Utilities.py`,
+`WebFetch.py`) portaient sur des fichiers qui avaient déjà, avant cette
+session, des modifications non liées non commitées (18 à 85 lignes chacun,
+issues d'un travail antérieur). `Pgn.py` seul était propre.
+
+**Décision :** contrairement au commit isolé de la Phase 3 (`ConfigData.py`
+seul), ici committer directement l'état courant (déjà dirty) des fichiers
+touchés par la Phase 4a, sans tentative de `git stash`/`git mv`/`git stash
+pop`. Un stash aurait produit un patch référençant l'ancien nom de fichier
+et l'ancien contenu ; le rejouer après un `git mv` + edits risquait un
+conflit silencieux ou une perte de contenu difficile à détecter. Le contenu
+non lié pré-existant (`ReadMe.md`, `chessable-to-pgn.py` supprimé, `img.png`
+supprimé) reste non commité, comme pour la Phase 3.
+
+**Conséquence :** le commit Phase 4a peut contenir, en plus des changements
+de la Phase 4a proprement dite, d'éventuelles modifications antérieures déjà
+présentes dans les fichiers renommés. Aucune n'a été identifiée comme
+fonctionnellement significative lors de la relecture des diffs avant commit.

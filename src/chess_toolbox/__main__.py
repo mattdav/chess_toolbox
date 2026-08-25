@@ -43,33 +43,19 @@ def main() -> None:
     # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
     # Approche recommandée pour contourner Cloudflare Bot Management.
     if len(sys.argv) > 1 and sys.argv[1] == "chessable-start-browser":
-        from chess_toolbox.bin.chessable_to_pgn.WebFetch import start_automation_browser
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import (
+            start_automation_browser,
+        )
 
         start_automation_browser()
         return
 
     # chessable-login : ouvre CfT, attend la connexion manuelle, sauvegarde les cookies.
     if len(sys.argv) > 1 and sys.argv[1] == "chessable-login":
-        from chess_toolbox.bin.chessable_to_pgn.WebFetch import login_and_save_cookies
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import login_and_save_cookies
 
         profile = sys.argv[2] if len(sys.argv) > 2 else "Default"
         login_and_save_cookies(profile)
-        return
-
-    # chessable-import-cookies : injecte des cookies exportés depuis un vrai navigateur.
-    # Contourne Cloudflare sans passer par le login automatisé.
-    # Usage : chessable-import-cookies <fichier.json> [profil]
-    if len(sys.argv) > 1 and sys.argv[1] == "chessable-import-cookies":
-        from chess_toolbox.bin.chessable_to_pgn.WebFetch import import_cookies_from_file
-
-        if len(sys.argv) < 3:
-            print("Usage : chessable-import-cookies <cookies.json> [profil]")
-            print("Exporter les cookies Chessable depuis Chrome/Firefox avec")
-            print("l'extension 'Cookie-Editor' (format JSON), puis fournir le fichier.")
-            sys.exit(1)
-        cookies_file = sys.argv[2]
-        profile = sys.argv[3] if len(sys.argv) > 3 else "Default"
-        import_cookies_from_file(cookies_file, profile)
         return
 
     parser = argparse.ArgumentParser(

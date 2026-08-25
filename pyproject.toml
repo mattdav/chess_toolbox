@@ -20,7 +20,6 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "selenium>=4.31.0",
     "setuptools>=82.0.1",
-    "curl-cffi>=0.7.0",
 ]
 
 [project.scripts]
@@ -101,16 +100,12 @@ module = ["selenium.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["curl_cffi.*"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = [
-    "chess_toolbox.bin.chessable_to_pgn.Utilities",
-    "chess_toolbox.bin.chessable_to_pgn.Pgn",
-    "chess_toolbox.bin.chessable_to_pgn.CommandLine",
+    "chess_toolbox.bin.chessable_to_pgn.utilities",
+    "chess_toolbox.bin.chessable_to_pgn.pgn_writer",
+    "chess_toolbox.bin.chessable_to_pgn.command_line",
     "chess_toolbox.bin.chessable_to_pgn.core",
-    "chess_toolbox.bin.chessable_to_pgn.WebFetch",
+    "chess_toolbox.bin.chessable_to_pgn.web_fetch",
     "chess_toolbox.bin.split_pgn.core",
 ]
 ignore_errors = true

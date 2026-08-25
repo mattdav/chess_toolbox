@@ -286,3 +286,51 @@ complétion de `.claude/` depuis le template.
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Phase 4a — 2026-08-25 — chess_toolbox
+
+**Objectif :** renommer les modules du submodule `chessable_to_pgn` en
+snake_case, supprimer `ConfigData.py` (façade Phase 3) et le code mort
+lié à curl_cffi.
+
+**Réalisé :**
+  - `git mv` : `WebFetch.py`→`web_fetch.py`, `CommandLine.py`→`command_line.py`,
+    `Utilities.py`→`utilities.py`, `Pgn.py`→`pgn_writer.py` (piège évité :
+    un dossier `pgn/` existait déjà, `Pgn.py` ne pouvait pas devenir `pgn.py`)
+  - `pgn/ChessBase Import Issue.pgn` déplacé vers `tests/fixtures/` (copie
+    manuelle inter-dépôts, `git mv` refusant de franchir la frontière
+    submodule/parent), dossier `pgn/` vide supprimé
+  - `ConfigData.py` supprimé ; tous les modules lisent `settings`
+    (`chess_toolbox.config.settings`) directement
+  - Code mort curl_cffi supprimé : `loadHtmlWithCurl`, `_load_cookies`,
+    `import_cookies_from_file` (vérifié : aucun appelant hors du sous-graphe
+    isolé lui-même) ; dépendance `curl-cffi` retirée de `pyproject.toml`
+  - `__main__.py` : imports `WebFetch`→`web_fetch` corrigés ; sous-commande
+    `chessable-import-cookies` supprimée (ciblait la fonction supprimée)
+  - `.env.example` : section cookies curl_cffi retirée
+  - `chessable_cookies.json` supprimé à la racine
+  - `pyproject.toml` : bloc `[[tool.mypy.overrides]] module = ["curl_cffi.*"]`
+    supprimé ; override restant mis à jour vers les noms snake_case
+  - Vérifié : `Settings` est mutable (pas de `frozen=True`) — les
+    réassignations `settings.x = ...` dans `command_line.py` sont sûres
+  - Vérifications : `uv sync --all-extras` (lockfile à jour) ; `uv run inv
+    lint` → 0 erreur ; `uv run chess_toolbox extract-chessable -courses 5193`
+    → comportement identique (cours trouvé, 16 chapitres lus, variations
+    comptées)
+  - Commit submodule isolé aux 7 fichiers touchés par la Phase 4a (état
+    courant déjà dirty committé directement, pas de stash — voir
+    DECISIONS.md)
+
+**Points signalés (hors périmètre, non corrigés) :**
+  - `__init__.py` du submodule (`from .core import main`) n'a jamais été
+    commité dans le submodule, même avant cette session — le paquet
+    dépend d'un fichier non versionné
+  - `ReadMe.md` modifié, `chessable-to-pgn.py` et `img.png` supprimés dans
+    le submodule : changements pré-existants non liés à la Phase 4a,
+    laissés non commités
+  - `__main__.py` : l'épilogue de `extract-chessable` documente toujours
+    des variables `CHROME_*` obsolètes (signalé en Phase 3, non corrigé)
+
+**Fichiers modifiés :** voir commit associé.
+
+---
