@@ -82,3 +82,36 @@ comptage de processus `firefox.exe` : Firefox est multi-processus par
 architecture (process de contenu, GPU, etc.), donc un seul navigateur/une
 seule fenêtre logique produit légitimement des dizaines de `firefox.exe`
 dans le gestionnaire de tâches — ce compte n'est pas un signal fiable.
+
+## 2026-08-25 — Phase 4d : `/dashboard/` ne redirige jamais, même sans session
+
+**Symptôme :** `ensure_session()` (préflight comparant l'URL de
+`/dashboard/` avant/après navigation, signal primaire imposé par
+`SPEC-session-chessable`) ne levait jamais `ChessableAuthError`, même testé
+avec un profil Firefox complètement vierge (sans aucun cookie). L'erreur
+n'apparaissait finalement que plus tard, au premier fetch réel d'une
+variation (`_assert_not_redirected` dans `loadHtmlFromWeb`) — le
+comportement de bout en bout (message explicite, code de sortie 2, aucun
+fichier écrit) restait correct, mais le préflight ne remplissait pas son
+rôle de détection précoce avant tout traitement.
+
+**Fausse piste :** supposer un bug dans `_assert_not_redirected` elle-même,
+ou un délai d'attente insuffisant (`WebDriverWait` 15s + `sleep(2)`) avant
+la comparaison d'URL.
+
+**Cause réelle :** confirmé par un script de diagnostic isolé (navigation
+répétée vers `/dashboard/` avec un profil vierge, lecture de
+`browser.current_url` sur 10 secondes) : `/dashboard/` est une route
+d'application cliente (SPA) qui reste affichée à la même URL que la session
+soit valide ou non — aucune redirection serveur n'a lieu sur cette route
+spécifique, contrairement aux pages de cours/variation qui redirigent bien
+vers la racine du site.
+
+**Fix :** utiliser `/profile/` comme URL de vérification dans
+`ensure_session()` — confirmé par le même type de test qu'elle redirige
+fidèlement vers la racine sans session, et reste sur `/profile/` avec une
+session valide (testé sur le profil d'automatisation réel, déjà authentifié
+depuis la Phase 4c). Leçon générale : pour un signal "comparaison d'URL
+après navigation", valider empiriquement la route choisie avec un profil
+sans session avant de la considérer fiable — certaines routes SPA ne
+redirigent pas alors que d'autres pages du même site le font.

@@ -176,3 +176,45 @@ puis confirmé par reproduction directe (`sys.argv=['prog','-web']` levait
 `core.py`, non modifié) — void `[[lesson]]` "cache toujours sous
 `course/one-off/`" dans `LESSONS.md` pour le piège associé, découvert lors
 du test comparatif des 3 modes.
+
+## 2026-08-25 — Phase 4d : `_is_public_page` conservé (narrowé), `profile/` plutôt que `dashboard/` pour `ensure_session()`
+
+Le plan demandait littéralement la « suppression de `_is_public_page` /
+`_warn_session_expired` », mais `SPEC-session-chessable` exige par ailleurs
+qu'un cache HTML déjà sur disque reconnu comme page publique soit toujours
+ignoré et refetché (`FIX-cache-html-empoisonne`) — cas où aucune navigation
+live n'a lieu, donc aucune comparaison d'URL n'est possible.
+
+**Décision :** `_is_public_page`/`PUBLIC_PAGE_TITLE` sont conservés mais
+narrowés au seul chemin de lecture de cache sur disque
+(`getHtml`/`FetchMode.FETCH_NONE`/`FETCH_UPDATE` avec fichier existant).
+`_warn_session_expired` (print-et-continuer sur un fetch réseau live) est
+supprimé et remplacé par `ChessableAuthError`, levée par
+`_assert_not_redirected` (comparaison d'URL, signal primaire imposé par la
+spec) — appelée à la fois par `ensure_session()` (préflight) et par
+`loadHtmlFromWeb()` (par requête, retry loop exempté via
+`except ChessableAuthError: raise`).
+
+**`ensure_session()` navigue vers `profile/`, pas `dashboard/`** : testé
+empiriquement avec un profil Firefox vierge (sans cookies) — `dashboard/`
+est une route SPA qui ne redirige jamais côté serveur même sans session
+(URL inchangée après navigation + attente), rendant la comparaison d'URL
+inopérante sur cette page. `profile/` redirige fidèlement vers la racine du
+site sans session, et reste sur `profile/` avec une session valide (vérifié
+sur le profil d'automatisation réel, déjà authentifié depuis la Phase 4c) —
+voir `[[lesson]]` correspondante dans `LESSONS.md`.
+
+**`ChessableFetcher.__enter__`** appelle `ensure_session()` juste après la
+construction du navigateur ; si elle lève, le navigateur est explicitement
+fermé avant de relever l'exception (`__exit__` n'est jamais invoqué quand
+`__enter__` lève lui-même).
+
+**`--relogin`** : détecté et retiré de `sys.argv` dans le même bloc
+d'interception précoce que `extract-chessable` (avant argparse), appelle
+`login_and_save_cookies()` puis poursuit l'extraction normalement.
+
+**Vérifié en conditions réelles** (pas seulement par relecture) :
+session invalide (profil Firefox vierge) → `ChessableAuthError` levée au
+préflight, message explicite, code de sortie 2, aucun fichier HTML écrit ;
+session valide (profil d'automatisation réel) → extraction normale
+inchangée, code de sortie 0.

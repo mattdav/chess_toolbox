@@ -3,7 +3,7 @@ type: Spec
 id: SPEC-alignement-template
 title: "Alignement de chess_toolbox sur project_template"
 description: "Rattacher chess_toolbox, créé avant le template, à l'infrastructure qualité et documentaire standard"
-status: accepted # draft | accepted | implemented | superseded
+status: implemented # draft | accepted | implemented | superseded
 superseded-by:
 work-item:
 tags: [tooling, ci, documentation]

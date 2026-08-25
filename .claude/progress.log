@@ -478,3 +478,76 @@ par run (au lieu d'une par fetch/retry), remplacer le parsing manuel de
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Session du 2026-08-25 15:18 — chess_toolbox
+
+- Finalisé la Phase 4c du plan de modernisation chess_toolbox (WebFetch/ChessableFetcher, CHESSABLE_WINDOW_MODE)
+- Migré la config locale `.env` de CHESSABLE_HEADLESS vers CHESSABLE_WINDOW_MODE=offscreen, cohérent avec .env.example déjà migré
+- Relu intégralement web_fetch.py (806 lignes) en vérification indépendante, corrigé une régression (référence obsolète à CHESSABLE_HEADLESS dans _warn_session_expired)
+- Exécuté le test comparatif empirique des 3 modes de fenêtre (offscreen/headless/visible) sur 24 variations du chapitre 0 du cours 5193, après avoir réduit le périmètre du test sur retour utilisateur (un cours complet prend des dizaines de minutes)
+- Documenté les résultats et une leçon (cache toujours sous course/one-off/ pour les -variations isolées) dans .claude/LESSONS.md, la décision d'architecture dans .claude/DECISIONS.md, la Phase 4c comme réalisée dans docs/plans/PLAN-modernisation.md et .claude/progress.log
+- Committé en deux temps (submodule chessable_to_pgn puis dépôt parent), lint vert avant chaque commit
+
+**En suspens :** Phase 4d (détection d'authentification via ChessableAuthError/--relogin) non démarrée. Mise à jour des statuts SPEC-alignement-template et SPEC-session-chessable en attente (Phase 4 pas encore totalement terminée). Arbitrage du seuil de couverture (fail_under=80) toujours en suspens, non urgent.
+
+---
+
+## Phase 4d — 2026-08-25 — chess_toolbox
+
+**Objectif :** implémenter la détection d'authentification (Phase 4d du
+plan de modernisation) : comparaison d'URL comme signal primaire,
+`ensure_session()` en préflight, exception `ChessableAuthError`, option
+`--relogin`.
+
+**Réalisé :**
+
+- `web_fetch.py` : ajout de `ChessableAuthError`, `_assert_not_redirected`
+  (comparaison d'URL, signal primaire) et `ensure_session()` ; suppression
+  de `_warn_session_expired` (print-et-continuer sur fetch réseau live) ;
+  `_is_public_page`/`PUBLIC_PAGE_TITLE` conservés mais narrowés au seul
+  chemin de lecture d'un cache HTML déjà sur disque (aucune navigation live
+  possible dans ce cas, donc aucune comparaison d'URL) — voir
+  `FIX-cache-html-empoisonne` et décision dans `DECISIONS.md`
+- `loadHtmlFromWeb()` : appel à `_assert_not_redirected` après chaque
+  navigation, `ChessableAuthError` exemptée de la boucle de retry
+  (`except ChessableAuthError: raise` avant le `except Exception` générique)
+- `ChessableFetcher.__enter__` : appelle `ensure_session()` juste après la
+  construction du navigateur ; ferme explicitement le navigateur si elle
+  lève (`__exit__` n'est pas invoqué quand `__enter__` lève lui-même)
+- `src/chess_toolbox/__main__.py` : les deux blocs `with ChessableFetcher():
+  chessable_main()` (interception précoce et branche argparse) capturent
+  `ChessableAuthError` et sortent avec le code 2 ; option `--relogin`
+  ajoutée dans l'interception précoce (`extract-chessable`), appelle
+  `login_and_save_cookies()` avant de poursuivre l'extraction ; documentée
+  dans l'epilog d'aide
+- `tests/fixtures/chessable_public_page.html` créé ; premier test unitaire
+  du module (`tests/unit/test_web_fetch.py`), 2 cas sur `_is_public_page`
+- Vérifié en conditions réelles (pas seulement par relecture) : profil
+  Firefox vierge (sans cookies) → `ChessableAuthError` levée au préflight,
+  message explicite, code de sortie 2, aucun fichier HTML écrit ; profil
+  d'automatisation réel (session valide, authentifié depuis la Phase 4c) →
+  extraction normale inchangée, code de sortie 0
+- Bug découvert par ce test réel : `ensure_session()` naviguait initialement
+  vers `dashboard/`, une route SPA qui ne redirige jamais côté serveur même
+  sans session — corrigé en `profile/`, qui redirige fidèlement sans
+  session et reste stable avec une session valide (diagnostic isolé,
+  décision et leçon documentées dans `DECISIONS.md`/`LESSONS.md`)
+- `docs/plans/PLAN-modernisation.md` : Phase 4d marquée réalisée, les deux
+  cases de mise à jour documentaire cochées
+- `docs/specs/SPEC-session-chessable.md` et `SPEC-alignement-template.md` :
+  statut passé à `implemented`
+
+**Points signalés (hors périmètre, non corrigés) :**
+
+- `docs/plans/PLAN-modernisation.md` : l'en-tête de la Phase 3 ne porte
+  toujours pas le suffixe « — réalisé », alors que ses fichiers cibles
+  existent tous (ou ont été légitimement supprimés/remplacés en Phase 4a,
+  ex. `ConfigData.py`) et que `.claude/` est complet — vraisemblable oubli
+  de bookkeeping d'une session antérieure, non corrigé ici car hors
+  périmètre explicite de la Phase 4d
+- Seuil de couverture (`fail_under = 80` dans `pyproject.toml`) toujours en
+  suspens, non urgent — inchangé depuis les phases précédentes
+
+**Fichiers modifiés :** voir commit associé.
+
+---

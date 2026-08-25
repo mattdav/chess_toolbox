@@ -92,7 +92,7 @@ chacune vérifiée avant d'enchaîner sur la suivante.
 - Vérification : extraction complète fonctionnelle, une seule fenêtre Firefox
   ouverte sur toute la durée du run, tableau comparatif des trois modes.
 
-### 4d. Détection d'authentification
+### 4d. Détection d'authentification — réalisé
 
 - Fichiers cibles : `web_fetch.py`, `src/chess_toolbox/__main__.py`,
   `tests/fixtures/chessable_public_page.html`.
@@ -105,9 +105,9 @@ chacune vérifiée avant d'enchaîner sur la suivante.
 ## Mise à jour documentaire
 
 - [x] `README.md` du produit mis à jour si le fonctionnement change (Phase 1)
-- [ ] Statut de `SPEC-alignement-template` passé à `implemented` une fois la
+- [x] Statut de `SPEC-alignement-template` passé à `implemented` une fois la
       Phase 4 terminée
-- [ ] Statut de `SPEC-session-chessable` passé à `implemented` une fois la
+- [x] Statut de `SPEC-session-chessable` passé à `implemented` une fois la
       Phase 4d terminée
 - [x] `.env.example` documenté pour `CHESSABLE_WINDOW_MODE` (Phase 4c)
 

@@ -3,7 +3,7 @@ type: Spec
 id: SPEC-session-chessable
 title: "Détection fiable de l'expiration de session Chessable"
 description: "Détecter et signaler explicitement la perte de session avant d'écrire un résultat partiel ou vide"
-status: accepted # draft | accepted | implemented | superseded
+status: implemented # draft | accepted | implemented | superseded
 superseded-by:
 work-item:
 tags: [chessable, scraping, reliability]

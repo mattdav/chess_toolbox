@@ -35,11 +35,23 @@ def main() -> None:
     # qui entre en conflit avec le parsing argparse des arguments optionnels.
     if len(sys.argv) > 1 and sys.argv[1] == "extract-chessable":
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
-        from chess_toolbox.bin.chessable_to_pgn.web_fetch import ChessableFetcher
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import (
+            ChessableAuthError,
+            ChessableFetcher,
+            login_and_save_cookies,
+        )
 
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
-        with ChessableFetcher():
-            chessable_main()
+        engine_args = sys.argv[2:]
+        if "--relogin" in engine_args:
+            engine_args = [a for a in engine_args if a != "--relogin"]
+            login_and_save_cookies()
+        sys.argv = [sys.argv[0]] + engine_args
+        try:
+            with ChessableFetcher():
+                chessable_main()
+        except ChessableAuthError as e:
+            print(str(e))
+            sys.exit(2)
         return
 
     # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
@@ -128,6 +140,10 @@ Arguments transmis au moteur :
   -browserprofiledir CHEMIN  Répertoire profils Chrome
   -browserprofile NOM     Nom du profil Chrome
 
+Option locale (non transmise au moteur) :
+  --relogin               Relance la connexion manuelle Chessable avant
+                           l'extraction (session expirée ou absente)
+
 Variables d'environnement (.env) :
   CHROME_BINARY_PATH      Chemin vers Chrome (prioritaire sur -browserbinary)
   CHROME_PROFILE_DIR      Répertoire profils Chrome
@@ -155,13 +171,20 @@ Variables d'environnement (.env) :
 
     elif args.command == "extract-chessable":
         from chess_toolbox.bin.chessable_to_pgn import main as chessable_main
-        from chess_toolbox.bin.chessable_to_pgn.web_fetch import ChessableFetcher
+        from chess_toolbox.bin.chessable_to_pgn.web_fetch import (
+            ChessableAuthError,
+            ChessableFetcher,
+        )
 
         # CommandLine.py lit sys.argv directement — on le remplace par les args
         # de cette sous-commande (en gardant argv[0] comme nom de programme)
         sys.argv = [sys.argv[0]] + (args.chessable_args or [])
-        with ChessableFetcher():
-            chessable_main()
+        try:
+            with ChessableFetcher():
+                chessable_main()
+        except ChessableAuthError as e:
+            print(str(e))
+            sys.exit(2)
 
 
 if __name__ == "__main__":
