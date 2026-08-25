@@ -63,3 +63,29 @@ rester cohérent avec la convention déjà en place dans ce projet plutôt que d
 suivre le template au pied de la lettre. `hygiene.unknown_fields: off`
 rendait les deux options valides sans erreur okflint ; le choix est une
 question de cohérence interne, pas de contrainte technique.
+
+## 2026-08-25 — `Settings.geckodriver_path` modélisé mais non exposé par la façade `ConfigData.py`
+
+`geckodriver_path` fait partie du périmètre explicite de `config/settings.py`
+(Phase 3), mais rien dans `ConfigData.py` ni ailleurs ne le consomme
+aujourd'hui : `WebFetch.py` lit toujours `GECKODRIVER_PATH` directement via
+`os.environ.get(...)`, et ce module reste intouché en Phase 3 (réécriture
+prévue Phase 4b/4c).
+
+**Décision :** ne pas ajouter de constante `GECKODRIVER_PATH` inutilisée dans
+la façade `ConfigData.py` — ce serait du code mort tant que `WebFetch.py`
+n'a pas été migré. `settings.geckodriver_path` reste disponible pour la
+Phase 4b/4c, qui le consommera directement depuis `config.settings`.
+
+## 2026-08-25 — Commit scindé dans le submodule `chessable_to_pgn` : uniquement `ConfigData.py`
+
+Le submodule `src/chess_toolbox/bin/chessable_to_pgn` portait déjà, avant
+cette session, des modifications non liées à la Phase 3 (`CommandLine.py`,
+`Utilities.py`, `WebFetch.py`, `ReadMe.md`, suppressions/ajouts de fichiers)
+issues d'un travail antérieur non commité.
+
+**Décision :** committer dans le submodule uniquement `ConfigData.py` (seul
+fichier touché par la Phase 3), en laissant les autres fichiers du submodule
+dans leur état non commité — même logique que pour les fichiers non liés du
+dépôt parent (cf. Phase 2). Le pointeur de submodule mis à jour dans le
+dépôt parent ne référence donc que ce commit ciblé.

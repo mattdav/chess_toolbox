@@ -244,3 +244,45 @@ empoisonné, dans le corpus documentaire OKF.
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Phase 3 — 2026-08-25 — chess_toolbox
+
+**Objectif :** scaffolding de configuration (pydantic-settings) et
+complétion de `.claude/` depuis le template.
+
+**Réalisé :**
+  - `src/chess_toolbox/utils.py` créé (`get_package_dir()`, adapté du
+    template, `importlib.resources`)
+  - `src/chess_toolbox/bin/py.typed` supprimé (doublon non référencé dans
+    `pyproject.toml`, seul `src/chess_toolbox/py.typed` est déclaré dans
+    `force-include`)
+  - `src/chess_toolbox/config/settings.py` créé : classe `Settings`
+    (pydantic-settings) modélisant `base_chessable_url`,
+    `firefox_binary_path`, `firefox_automation_profile_dir`,
+    `geckodriver_path`, `chessable_html_cache`, `chessable_pgn_cache`,
+    `chessable_headless` ; dépendance `pydantic-settings>=2.6.0` ajoutée
+  - `src/chess_toolbox/bin/chessable_to_pgn/ConfigData.py` transformé en
+    façade déléguant à `settings` (commité isolément dans le submodule,
+    voir DECISIONS.md) ; `CHESSABLE_COOKIES_FILE` volontairement laissé
+    en `os.environ.get()` brut (code mort, supprimé en Phase 4a)
+  - `.claude/` complété depuis le template : `settings.json`,
+    `rules/python-style.md`, `rules/docs-standard.md`,
+    `commands/doc-new.md`, `DECISIONS-archive.md`, `agents/.gitkeep`,
+    `skills/.gitkeep`
+  - Vérifications : `uv run inv lint` → 0 erreur ; `uv run chess_toolbox
+    extract-chessable -courses 5193` → comportement identique (cours
+    trouvé, chapitres lus, écriture PGN incrémentale ; interrompu par le
+    timeout du smoke test, pas une erreur)
+  - README non modifié : refactor interne, aucune interface externe
+    changée
+
+**Points signalés (hors périmètre, non corrigés) :**
+  - `chessable_cookies.json` suivi par git avec du contenu de type cookie
+    (nettoyage prévu Phase 4a)
+  - `src/chess_toolbox/__main__.py` : l'épilogue de `extract-chessable`
+    documente des variables `CHROME_*` obsolètes (implémentation Chrome
+    révolue) au lieu des `FIREFOX_*` actuelles
+
+**Fichiers modifiés :** voir commit associé.
+
+---
