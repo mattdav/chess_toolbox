@@ -163,3 +163,13 @@ redirigent pas alors que d'autres pages du même site le font.
 **Cause réelle :** le typage statique et le style ne valident ni la sémantique des assertions ni la justesse des fixtures — seule l'exécution réelle du test (`pytest`, pas juste le hook de lint) révèle ces classes d'erreurs.
 
 **Fix :** toujours exécuter `pytest` directement après l'écriture d'un nouveau fichier de test, jamais se fier au seul lint-clean comme critère de "terminé". Pour un besoin de "coup illégal" isolé, préférer des objets factices minimaux (duck-typing) à un état d'échiquier réel contrivé — plus fiable et plus lisible qu'une position réelle dont l'illégalité doit être vérifiée manuellement.
+
+## 2026-08-26 — Dépôt git imbriqué sans `.gitmodules` : gitlink silencieux, destructeur au clone
+
+**Symptôme :** aucun message d'erreur local. `src/chess_toolbox/bin/chessable_to_pgn/` contenait son propre `.git/` (vestige d'un clone initial de l'upstream avant intégration), sans `.gitmodules` déclaré au niveau du dépôt parent. Les fichiers étaient physiquement présents et fonctionnels sur la machine de développement — rien ne laissait supposer un problème en travaillant localement, ni `git status`, ni les tests, ni le lint.
+
+**Fausse piste :** aucune — le bug n'a jamais été déclenché localement, donc jamais suspecté. Il aurait pu rester indétecté indéfiniment sans un clone frais explicite.
+
+**Cause réelle :** en présence d'un `.git/` imbriqué mais d'aucun `.gitmodules`, git enregistre quand même une entrée dans son index — un **gitlink** (mode 160000, juste un SHA de commit, sans URL associée) — au lieu de suivre le contenu du sous-dossier comme des fichiers normaux. `git submodule update --init` est un no-op faute de `.gitmodules` pour résoudre ce SHA vers une URL. Un clone frais du dépôt parent obtient donc un **répertoire vide** à cet emplacement, silencieusement — pas d'erreur, pas d'avertissement. Tout ce qui dépend de ce contenu (imports Python, CI via `actions/checkout`) casse en aval, loin du symptôme réel.
+
+**Fix :** la seule vérification fiable est un clone réellement frais (`git clone --no-hardlinks file:///<repo local>` ou équivalent distant) suivi d'une exécution complète (tests, build) **dans ce clone**, jamais dans l'arbre de travail d'origine — celui-ci contient toujours les fichiers physiquement, même quand le dépôt ne les suit pas. Généralisable : tout sous-dossier contenant son propre `.git/` dans un dépôt qui n'a pas de `.gitmodules` correspondant est suspect et doit être vérifié de cette façon avant tout push, indépendamment de la façon dont il est arrivé là (sous-module mal initialisé, `git clone` fait par erreur dans un sous-dossier, copie d'un ancien projet avec son historique).

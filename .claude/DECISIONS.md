@@ -278,3 +278,53 @@ L'objectif de la Phase 4b était de **supprimer** les exemptions mypy, pas d'en 
 **Décision :** consigné ici explicitement comme dette assumée, plutôt que de le laisser vivre comme une ligne de configuration parmi d'autres dans `pyproject.toml`.
 
 **Condition de levée :** supprimable dès que `split_pgn/core.py` sort lui-même de son override `ignore_errors = true` (typage réel du module) — les erreurs `[no-untyped-call]` côté test disparaissent alors d'elles-mêmes, sans action supplémentaire.
+
+## 2026-08-26 — Absorption de `chessable_to_pgn` comme code source ordinaire (fin du dépôt imbriqué)
+
+`src/chess_toolbox/bin/chessable_to_pgn/` était un dépôt git imbriqué (son propre
+`.git/`), sans `.gitmodules` au niveau du dépôt parent. Le parent l'enregistrait
+donc comme un gitlink (mode 160000) sans URL associée — invisible depuis l'arbre
+de travail local (les fichiers y sont physiquement présents), mais destructeur à
+la première vraie utilisation : un clone frais aurait produit un répertoire
+**vide** à cet emplacement (`git submodule update --init` est un no-op faute de
+`.gitmodules`), et les deux workflows CI (`ci.yml`, `docs.yml`, tous deux en
+`actions/checkout@v4` sans `submodules:`) n'auraient jamais récupéré le code. Voir la leçon correspondante
+dans `LESSONS.md`.
+
+**Décision :** absorber le sous-répertoire comme code source ordinaire du dépôt
+parent plutôt que de régulariser un vrai submodule Git. Deux raisons :
+
+1. Le code a divergé irréversiblement de l'upstream
+   (`github.com/demastri/chessable-to-pgn`, John DeMastri, MIT) : renommage
+   snake_case, typage complet, configuration pydantic, `WebFetch` réécrit. Une
+   synchronisation upstream n'a plus de sens.
+2. L'upstream n'accorde pas de droits de push — un submodule pointant dessus
+   serait de toute façon impossible à faire évoluer normalement.
+
+L'attribution MIT est conservée via `License.txt` et les docstrings des modules.
+Un submodule Git réel aurait résolu le problème de clone, mais aurait imposé un
+coût opérationnel permanent (init/update à chaque clone, gestion d'un second
+remote) pour un bénéfice nul, l'upstream n'étant plus une cible de synchronisation.
+
+**Mécanique :** `git rm --cached` du gitlink, suppression du `.git` imbriqué,
+ré-ajout des fichiers comme blobs ordinaires (mode 100644). Historique complet
+du dépôt imbriqué (5 refs : `master`, `multiproc`, et leurs suivis distants)
+archivé avant suppression via `git bundle create --all`, vérifié
+(`git bundle verify` + comparaison avec `git show-ref`) :
+`C:/Users/matth/Documents/Dev/Python/archive/chessable-to-pgn-20260826.bundle`.
+
+**Effet de bord traité dans la même passe :** les fichiers absorbés sont
+désormais soumis aux hooks pre-commit du parent, qu'ils n'avaient jamais vus
+(vague d'erreurs markdownlint sur `ReadMe.md` — titres setext convertis en ATX,
+URL nue encadrée, frontmatter restauré après un bug de script de conversion —
+corrigées, pas exclues). Le `CLAUDE.md` du sous-dossier (non chargé comme
+mémoire projet par Claude Code depuis un sous-répertoire) a été fusionné dans le
+`CLAUDE.md` racine (section « chessable_to_pgn — notes spécifiques » : setup
+Selenium/Chrome for Testing, limitations connues) puis supprimé, pour éviter une
+copie non chargée et vouée à devenir obsolète.
+
+**Vérification bloquante avant push :** clone frais (`git clone --no-hardlinks
+file:///...`), confirmant que `chessable_to_pgn/` n'est plus vide, puis dans ce
+clone : `uv sync --all-extras`, 171 tests passants à 87,32 % de couverture,
+`pre-commit run --all-files` sans erreur, build Sphinx réussi avec génération
+effective de `docs/code/api/` (absent avant build) et zéro warning.
