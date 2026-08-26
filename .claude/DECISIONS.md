@@ -328,3 +328,27 @@ file:///...`), confirmant que `chessable_to_pgn/` n'est plus vide, puis dans ce
 clone : `uv sync --all-extras`, 171 tests passants à 87,32 % de couverture,
 `pre-commit run --all-files` sans erreur, build Sphinx réussi avec génération
 effective de `docs/code/api/` (absent avant build) et zéro warning.
+
+## 2026-08-26 — Correction de `docs.yml` : `uv sync --all-extras` + permissions Actions en écriture
+
+Le premier push de l'absorption a révélé que le workflow CI « Build and deploy
+Github pages » (`docs.yml`) échouait avec `sphinx-build: not found`, pour la
+même raison déjà corrigée sur `ci.yml` le 2026-08-24 : `uv sync` (sans
+`--all-extras`) n'installe pas les dépendances optionnelles, dont Sphinx.
+[docs.yml:29](.github/workflows/docs.yml#L29) corrigé en conséquence.
+
+Cette première correction a révélé un second problème, distinct et jusque-là
+masqué par le premier : le job de déploiement échouait avec `403 Permission
+denied to github-actions[bot]` en tentant de pousser la branche `gh-pages` —
+le dépôt était configuré avec les permissions par défaut du `GITHUB_TOKEN` en
+lecture seule (réglage historique de ce dépôt nouvellement créé sur GitHub).
+Corrigé via `gh api --method PUT
+repos/mattdav/chess_toolbox/actions/permissions/workflow -f
+default_workflow_permissions=write`, avec l'accord explicite de l'utilisateur
+(changement de sécurité au niveau du dépôt : accorde l'écriture à tous les
+workflows du repo, pas seulement à `docs.yml`).
+
+Après ces deux corrections, le workflow est passé au vert de bout en bout
+(build Sphinx + push de `gh-pages`). Le site GitHub Pages public
+(Settings → Pages → source `gh-pages`) n'a pas été activé — c'est une
+décision de visibilité distincte, non demandée, laissée à l'utilisateur.
