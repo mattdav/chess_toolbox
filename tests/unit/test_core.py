@@ -11,6 +11,7 @@ from chess_toolbox.bin.chessable_to_pgn.core import (
     generateCoursePGNs,
     loadChapterInfo,
     loadCourseInfo,
+    loadVariationInfo,
     main,
     processBatch,
     processChapter,
@@ -110,6 +111,42 @@ class TestProcessChapter:
         )
         result = processChapter("123", tag_str, "Default")
         assert result == [chapterBS, ["var1"]]
+
+
+class TestLoadVariationInfo:
+    """Tests pour `loadVariationInfo`."""
+
+    def test_builds_round_string_and_skips_missing_html(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Le round (chapitre.variation) est calculé, les HTML absents ignorés."""
+        variation_ok = BeautifulSoup(
+            '<div><a href="/variation/38877075/some-name">Some Name</a></div>',
+            "html.parser",
+        ).find("div")
+        variation_missing = BeautifulSoup(
+            '<div><a href="/variation/11111111/other-name">Other Name</a></div>',
+            "html.parser",
+        ).find("div")
+        variationBS = BeautifulSoup("<title>variation page</title>", "html.parser")
+
+        def _fake_get_variation_html(
+            variationId: str, courseId: str, profileName: str
+        ) -> BeautifulSoup | None:
+            return variationBS if variationId == "38877075" else None
+
+        monkeypatch.setattr(WebFetch, "getVariationHtml", _fake_get_variation_html)
+
+        chapterResults = [
+            [None, [variation_ok, variation_missing]],
+            [None, [variation_ok]],
+        ]
+        result = loadVariationInfo("123", chapterResults)
+
+        assert result == [
+            [variationBS, "38877075", "1.1"],
+            [variationBS, "38877075", "2.1"],
+        ]
 
 
 class TestProcessBatch:

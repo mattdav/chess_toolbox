@@ -252,3 +252,29 @@ Le spec initial de chantier 3 ne couvrait explicitement que les modules `chessab
 `extract-chessable`, `chessable-start-browser` et `chessable-login` sont interceptés directement via `sys.argv` **avant** l'appel à `argparse.parse_args()`, chacun avec un `return` explicite (lignes ~36-55). La branche `elif args.command == "extract-chessable":` (lignes 172-187), placée après `parser.parse_args()`, est donc provablement inatteignable — et référence en plus `args.chessable_args`, un attribut jamais défini via `add_argument` sur ce sous-parseur.
 
 **Décision :** signalé sans corriger (diff minimal, hors périmètre de chantier 3 qui est un chantier de tests, pas de correctif fonctionnel).
+
+### 2026-08-26 — Ajout de `.pytest_cache/**` aux exclude_patterns d'okf-base.yaml plutôt que suppression manuelle ponctuelle du dossier
+
+**Rationale :** Corrige la cause racine plutôt qu'un contournement à répéter à chaque session : sans ce pattern, tout commit échoue dès qu'un `pytest` local a été lancé avant, car okflint scanne le disque sans respecter .gitignore
+
+## 2026-08-26 — Lot de finition post-chantier 3 : bug mort supprimé, `loadVariationInfo` couvert, dette mypy consignée
+
+### Suppression de la branche morte `args.chessable_args` (`__main__.py`)
+
+Signalée sans correction dans l'entrée précédente ("Bug signalé, non corrigé"). Sur relecture, aucune raison de la garder : du code mort identifié par la couverture n'apporte rien à laisser vivre, cela impose seulement de le re-diagnostiquer plus tard.
+
+**Décision :** branche supprimée (lignes ~172-187). Aucune régression possible : `extract-chessable` reste intercepté avant `argparse` (lignes ~36-55, inchangées), et les tests `TestMain` de `test_main.py` couvrant cette sous-commande exercent tous ce chemin d'interception précoce, jamais l'ancienne branche morte. Confirmé par `pytest` (171 tests passent) et couverture de `__main__.py` à 99 % (seule la branche `if __name__ == "__main__":` elle-même reste non exercée, normal en test).
+
+### `loadVariationInfo` : absence de couverture confirmée comme un oubli, corrigée
+
+L'entrée "Chantier 3" ci-dessus qualifiait l'absence de couverture de `loadVariationInfo` d'« écart assumé ». Sur inspection du corps réel de la fonction et de sa chaîne d'appel (`WebFetch.getVariationDetailFromTag` → `WebFetch.getVariationHtml` → `WebFetch.getHtml`, cache-ou-réseau), seule la frontière `getVariationHtml` touche réellement Selenium ; le reste (construction du round `chapitre.variation`, filtrage des HTML absents, agrégation) est du parsing pur, sans dépendance réseau.
+
+**Décision :** ajout de `TestLoadVariationInfo` dans `test_core.py`, qui appelle `loadVariationInfo` pour de vrai avec des tags de variation construits via `BeautifulSoup` (même style que les tests existants du fichier), en ne monkeypatchant que `WebFetch.getVariationHtml`. Couverture totale du projet passée de 84,11 % à 87,32 %. Seul le cutoff de sécurité à 5000 variations (lignes 213-216) reste non couvert, même rationale que le cutoff à 500 chapitres déjà accepté : impraticable à déclencher dans un test unitaire.
+
+### `disallow_untyped_calls = false` sur `test_split_pgn_core.py` : dette assumée, pas neutre pour Phase 4b
+
+L'objectif de la Phase 4b était de **supprimer** les exemptions mypy, pas d'en ajouter. L'override introduit pendant chantier 3 pour tester `split_pgn.core` (module legacy non typé) depuis un fichier de test strict va donc à l'encontre de cet objectif — même s'il est scopé au seul fichier de test, jamais au module de production (cf. `[[lesson]]` "mypy no-untyped-call..." dans `LESSONS.md` pour le détail technique).
+
+**Décision :** consigné ici explicitement comme dette assumée, plutôt que de le laisser vivre comme une ligne de configuration parmi d'autres dans `pyproject.toml`.
+
+**Condition de levée :** supprimable dès que `split_pgn/core.py` sort lui-même de son override `ignore_errors = true` (typage réel du module) — les erreurs `[no-untyped-call]` côté test disparaissent alors d'elles-mêmes, sans action supplémentaire.
