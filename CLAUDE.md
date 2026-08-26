@@ -1,7 +1,7 @@
 ---
 type: ProjectStandards
 project: chess_toolbox
-updated: 2026-06-28
+updated: 2026-08-26
 tags: [python, chess]
 ---
 
@@ -42,14 +42,14 @@ chess_toolbox/
 │   │   │   ├── __init__.py     # expose main()
 │   │   │   └── core.py         # Logique de découpe PGN
 │   │   └── chessable_to_pgn/
-│   │       ├── CLAUDE.md
 │   │       ├── __init__.py     # expose main()
 │   │       ├── core.py         # Entrée principale (adapté de chessable-to-pgn.py)
-│   │       ├── CommandLine.py
-│   │       ├── ConfigData.py
-│   │       ├── Pgn.py
-│   │       ├── WebFetch.py
-│   │       └── Utilities.py
+│   │       ├── command_line.py
+│   │       ├── pgn_writer.py
+│   │       ├── web_fetch.py
+│   │       ├── utilities.py
+│   │       ├── License.txt     # MIT, attribution upstream
+│   │       └── ReadMe.md       # Doc upstream adaptée
 │   └── py.typed
 └── tests/
 ```
@@ -124,7 +124,9 @@ split_pgn:
   default_output_suffix: "_split"
 
 chessable_to_pgn:
-  output_dir: data/pgn
+  output_dir: data/pgn/chessable        # dossier de sortie des PGN
+  html_cache_dir: data/cache/chessable  # cache des pages HTML (évite re-téléchargements)
+  fetch_mode: incremental               # "incremental" | "all" | "cached"
 ```
 
 ### `src/chess_toolbox/config/settings.py`
@@ -139,6 +141,63 @@ Module centralisé qui charge `.env` via `python-dotenv` et `config.yaml` via `p
 - **pyyaml** : lecture de `config.yaml`
 
 Ce projet n'a **pas** de dépendance vers caissAI ni vers l'API Claude — ces dépendances appartiennent à `chess_coach`.
+
+## chessable_to_pgn — notes spécifiques
+
+`chessable_to_pgn` (`bin/chessable_to_pgn/`) est une adaptation du projet open source
+[chessable-to-pgn](https://github.com/demastri/chessable-to-pgn) par John DeMastri
+(MIT License, `License.txt` conservé). Le code a divergé irréversiblement de
+l'upstream (renommage snake_case, typage complet, config pydantic, `WebFetch`
+réécrit) : ce n'est plus un portage à synchroniser, mais du code source ordinaire
+du projet.
+
+### Configuration Selenium / Chrome for Testing
+
+Chrome normal refuse d'être piloté par Selenium si une instance utilisateur est
+déjà ouverte (il délègue silencieusement au processus existant, qui n'a pas les
+flags Selenium), ce qui produit :
+
+```text
+session not created: Chrome failed to start: crashed.
+(session not created: DevToolsActivePort file doesn't exist)
+```
+
+Utiliser **Chrome for Testing (CfT)**, binaire isolé dédié à l'automatisation :
+
+1. Télécharger **chrome** et **chromedriver** (`win64`, `Stable`) depuis
+   `https://googlechromelabs.github.io/chrome-for-testing/`
+2. Extraire dans `C:/tools/chrome-for-testing/`
+3. Dans `.env` :
+
+   ```text
+   CHROME_BINARY_PATH=C:/tools/chrome-for-testing/chrome.exe
+   CHROME_PROFILE_DIR=C:/tools/chrome-for-testing/user-data
+   CHESSABLE_HEADLESS=false
+   CHESSABLE_DEBUG_PORT=0
+   ```
+
+4. Premier lancement : se connecter à Chessable manuellement dans la fenêtre CfT.
+   Les cookies sont sauvegardés dans `CHROME_PROFILE_DIR` et réutilisés ensuite.
+
+Le mode `CHESSABLE_DEBUG_PORT > 0` (remote-debugging sur un Chrome déjà lancé)
+ne fonctionne pas sous Windows : un Chrome déjà ouvert délègue au singleton
+existant sans jamais ouvrir de socket sur le port demandé. En pratique, rester
+en `CHESSABLE_DEBUG_PORT=0` avec CfT.
+
+### Limitations connues
+
+1. **Authentification Chessable** : certains cours nécessitent d'être connecté —
+   utiliser CfT en mode non-headless pour la première connexion manuelle.
+2. **Rate limiting** : le cache HTML local (`html_cache_dir`) évite les
+   re-téléchargements en cas de blocage Chessable.
+3. **App-Bound Encryption** (Chrome 127+) : Chrome normal chiffre ses cookies
+   avec un mécanisme lié au compte Windows ; CfT gère ses propres cookies dans
+   `CHROME_PROFILE_DIR` sans ce mécanisme, donc sans interférence.
+
+### Tests spécifiques
+
+Mocker les appels HTTP (`requests`, Selenium) pour tester `generateCoursePGNs`
+et la génération PGN sans accès réseau ni navigateur.
 
 ## Règles importantes pour Claude Code
 
