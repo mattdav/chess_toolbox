@@ -1,8 +1,10 @@
 """Point d'entrée CLI unifié de chess_toolbox.
 
 Sous-commandes disponibles :
-    split-pgn           Découpe un PGN d'ouvertures en fichiers par variante
-    extract-chessable   Exporte un cours Chessable au format PGN
+    split-pgn                Découpe un PGN d'ouvertures en fichiers par variante
+    extract-chessable        Exporte un cours Chessable au format PGN
+    chessable-start-browser  Ouvre Firefox pour la connexion manuelle à Chessable
+    chessable-login          Connexion manuelle puis sauvegarde des cookies
 
 Exemples :
     uv run chess_toolbox split-pgn repertoire.pgn --moves "1.e4" --depth 2
@@ -54,8 +56,11 @@ def main() -> None:
             sys.exit(2)
         return
 
-    # chessable-start-browser : lance Chrome normal avec le port de debug CDP.
-    # Approche recommandée pour contourner Cloudflare Bot Management.
+    # chessable-start-browser : ouvre Firefox avec le profil d'automatisation
+    # dédié sur la page de connexion Chessable. L'utilisateur se connecte
+    # manuellement puis ferme Firefox ; les cookies persistent dans le profil
+    # et sont réutilisés par les extractions suivantes. C'est cette session
+    # issue d'un login réel qui permet de passer Cloudflare Bot Management.
     if len(sys.argv) > 1 and sys.argv[1] == "chessable-start-browser":
         from chess_toolbox.bin.chessable_to_pgn.web_fetch import (
             start_automation_browser,
@@ -64,7 +69,8 @@ def main() -> None:
         start_automation_browser()
         return
 
-    # chessable-login : ouvre CfT, attend la connexion manuelle, sauvegarde les cookies.
+    # chessable-login : ouvre Firefox, attend la connexion manuelle, puis
+    # sauvegarde les cookies de session dans le profil d'automatisation.
     if len(sys.argv) > 1 and sys.argv[1] == "chessable-login":
         from chess_toolbox.bin.chessable_to_pgn.web_fetch import login_and_save_cookies
 
@@ -136,18 +142,19 @@ Arguments transmis au moteur :
   -pgn none|incremental|after   Mode d'écriture PGN
   -pgnroot CHEMIN         Dossier de sortie des PGN
   -htmlroot CHEMIN        Dossier de cache HTML
-  -browserbinary CHEMIN   Chemin vers l'exécutable Chrome
-  -browserprofiledir CHEMIN  Répertoire profils Chrome
-  -browserprofile NOM     Nom du profil Chrome
+  -browserbinary CHEMIN   Chemin vers l'exécutable Firefox
+  -browserprofiledir CHEMIN  Répertoire du profil Firefox d'automatisation
+  -browserprofile NOM     Ignoré (conservé pour compatibilité)
 
 Option locale (non transmise au moteur) :
   --relogin               Relance la connexion manuelle Chessable avant
                            l'extraction (session expirée ou absente)
 
 Variables d'environnement (.env) :
-  CHROME_BINARY_PATH      Chemin vers Chrome (prioritaire sur -browserbinary)
-  CHROME_PROFILE_DIR      Répertoire profils Chrome
-  CHROME_PROFILE          Nom du profil (défaut: Default)
+  FIREFOX_BINARY_PATH     Chemin vers firefox.exe (vide = détection auto)
+  FIREFOX_AUTOMATION_PROFILE_DIR  Profil Firefox dédié au scraping
+  GECKODRIVER_PATH        Chemin vers geckodriver (vide = Selenium Manager)
+  CHESSABLE_WINDOW_MODE   offscreen (défaut) | headless | visible
   CHESSABLE_HTML_CACHE    Dossier de cache HTML (défaut: ./html/)
   CHESSABLE_PGN_CACHE     Dossier de sortie PGN (défaut: ./pgn/)
         """,
