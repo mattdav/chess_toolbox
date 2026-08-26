@@ -121,6 +121,10 @@ def docs(c: Context, open_browser: bool = False) -> None:
     module sous src/ est ainsi documenté sans qu'aucun fichier .rst n'ait à
     être écrit ou maintenu à la main, en local comme en CI. Le dossier
     généré (docs/code/api/) n'est pas versionné.
+
+    `-W --keep-going` reproduit le comportement de la CI : tout avertissement
+    devient une erreur, mais le build va au bout pour tous les remonter. Un
+    build local qui passe garantit ainsi un build CI qui passe.
     """
     src = Path("docs/code")
     out = Path("docs/build") / "html"
@@ -128,7 +132,7 @@ def docs(c: Context, open_browser: bool = False) -> None:
 
     print("📖 Building Sphinx documentation...")
     result = subprocess.run(
-        f'uv run sphinx-build -b html "{src}" "{out}"',
+        f'uv run sphinx-build -W --keep-going -b html "{src}" "{out}"',
         shell=True,
     )
     if result.returncode != 0:
