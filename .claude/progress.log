@@ -632,3 +632,40 @@ plan de modernisation) : comparaison d'URL comme signal primaire,
   - tests/fixtures/course_page.html
 
 ---
+
+## Session du 2026-08-26 15:58 — chess_toolbox
+
+- Finalisé le chantier 3 (couverture de tests chess_toolbox) : correction des 17 dernières violations ruff E501 (docstrings trop longues dans test_core.py, test_main.py, test_pgn_writer.py)
+- Reconfirmé la suite complète après corrections : 168 tests passent, couverture 84.11% (seuil 80% atteint)
+- Découvert et corrigé la cause racine d'un écart observé entre `uv run inv lint` (passait) et le hook pre-commit au moment du `git commit` (échouait) : `.pytest_cache/` est gitignoré mais absent des `exclude_patterns` d'`okf-base.yaml`, donc okflint le scanne dès qu'il existe sur disque (après un `pytest` local) et échoue sur `.pytest_cache/README.md` (F001)
+- Ajouté `.pytest_cache/**` aux `exclude_patterns` d'`okf-base.yaml` (staging chirurgical via patch pour ne pas embarquer d'autres changements non liés déjà présents dans ce fichier)
+- Créé le commit `f956354` ("test: porte la couverture globale à 84%") contenant uniquement le périmètre chantier 3 ; état sale préexistant et non lié (.python-version, bin/__init__.py, submodule chessable_to_pgn, etc.) volontairement laissé intact
+- Les chantiers 1 (erreurs Sphinx) et 2 (génération API dans conf.py) étaient déjà terminés et commités lors de segments précédents de cette même session
+
+**Fichiers modifiés :**
+  - docs/code/conf.py
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - src/chess_toolbox/config/settings.py
+  - tasks.py
+  - tests/unit/test_command_line.py
+  - tests/unit/test_core.py
+  - tests/unit/test_main.py
+  - tests/unit/test_pgn_writer.py
+  - tests/unit/test_split_pgn_core.py
+  - tests/unit/test_utilities.py
+  - tests/unit/test_utils.py
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-08-26 16:27 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - tests/unit/test_core.py
+
+---
