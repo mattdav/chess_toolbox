@@ -238,3 +238,17 @@ inchangée, code de sortie 0.
 ### 2026-08-26 — Génération de l'API (`sphinx-apidoc`) déplacée dans `docs/code/conf.py` plutôt qu'ajoutée comme étape CI
 
 **Rationale :** `.github/workflows/docs.yml` n'appelait jamais `sphinx-apidoc`, seulement `sphinx-build` — en CI, `docs/code/api/` (non versionné) restait donc vide et seule la page d'index était publiée sur GitHub Pages. Ajouter un step `sphinx-apidoc` dans le workflow aurait dupliqué la commande (déjà présente dans `inv docs`) avec un risque de divergence des options entre les deux. La génération est donc déclenchée depuis `conf.py` via le hook `builder-inited` (`setup(app)`), source unique de vérité pour local et CI ; le step `sphinx-apidoc` de `tasks.py` devient redondant et est retiré.
+
+## 2026-08-26 — Chantier 3 (couverture 80 %) : extension à `split_pgn`/`__main__`/`utils.py` plutôt que restriction du périmètre
+
+Le spec initial de chantier 3 ne couvrait explicitement que les modules `chessable_to_pgn/*`, mais le seuil `fail_under = 80` de `[tool.coverage.report]` (`source = ["src/chess_toolbox"]`, sans `omit`) s'applique à tout `src/chess_toolbox`, y compris `split_pgn/core.py`, `__main__.py` et `utils.py` (non couverts par le spec). Sans les tester, le seuil global restait inatteignable quel que soit le niveau de couverture atteint sur le seul périmètre du spec.
+
+**Décision (validée par l'utilisateur via question explicite) :** étendre le périmètre de chantier 3 à `split_pgn/core.py`, `__main__.py` et `utils.py`, plutôt que restreindre `fail_under`/ajouter un `omit` ou laisser le seuil échouer. Conséquence : nouveau bloc `[[tool.mypy.overrides]]` dédié à `tests.unit.test_split_pgn_core` (cf. `[[lesson]]` correspondante dans `LESSONS.md`) pour tester `split_pgn.core`, module legacy non typé, depuis un fichier de test strict.
+
+**Résultat final :** 168 tests, couverture globale 84,11 % (seuil 80 % atteint). Fonctions Selenium (`_build_browser`, `loadHtmlFromWeb`, `start_automation_browser`, `login_and_save_cookies`, construction du navigateur dans `ChessableFetcher`) explicitement exclues du périmètre de test (nécessitent un navigateur réel). Restent non couvertes, en écart assumé une fois le seuil dépassé : `loadVariationInfo` (corps réel, toujours monkeypatché dans les tests de `processBatch`), le `break` de coupure à 500 chapitres dans `loadChapterInfo` (impraticable à déclencher), et la branche `args.chessable_args` de `__main__.py` (voir bug ci-dessous, non testée car code mort).
+
+## 2026-08-26 — Bug signalé, non corrigé : branche `elif args.command == "extract-chessable"` morte dans `__main__.py`
+
+`extract-chessable`, `chessable-start-browser` et `chessable-login` sont interceptés directement via `sys.argv` **avant** l'appel à `argparse.parse_args()`, chacun avec un `return` explicite (lignes ~36-55). La branche `elif args.command == "extract-chessable":` (lignes 172-187), placée après `parser.parse_args()`, est donc provablement inatteignable — et référence en plus `args.chessable_args`, un attribut jamais défini via `add_argument` sur ce sous-parseur.
+
+**Décision :** signalé sans corriger (diff minimal, hors périmètre de chantier 3 qui est un chantier de tests, pas de correctif fonctionnel).

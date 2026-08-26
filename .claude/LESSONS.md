@@ -143,3 +143,23 @@ redirigent pas alors que d'autres pages du même site le font.
 **Cause réelle :** `.github/workflows/docs.yml` appelle uniquement `sphinx-build`, jamais `sphinx-apidoc` — `docs/code/api/` n'étant pas versionné (choix Phase 2), il est vide sur tout checkout CI propre. Seule l'invocation locale via `uv run inv docs` régénérait l'API au préalable. Même classe de bug déjà observée sur `chess_coach` (projet sœur, même template).
 
 **Fix :** générer l'API depuis `docs/code/conf.py` (hook `builder-inited`) plutôt que dans une étape CI séparée, pour que toute invocation de `sphinx-build` — locale ou CI — la déclenche automatiquement. Ajouter `-W --keep-going` au `sphinx-build` de la CI pour qu'un futur défaut similaire fasse échouer le job au lieu de publier une doc incomplète.
+
+## 2026-08-26 — mypy `no-untyped-call` sur les tests d'un module legacy `ignore_errors = true`
+
+**Symptôme :** `tests/unit/test_split_pgn_core.py` (module strictement typé) déclenchait 19 erreurs mypy `[no-untyped-call]` en appelant les fonctions de `split_pgn.core`, alors que ce module porte déjà `ignore_errors = true` dans `pyproject.toml`.
+
+**Fausse piste :** supposer que `ignore_errors = true` sur le module *source* dispenserait aussi ses *appelants* de la vérification — semblait cohérent avec le comportement d'`ignore_missing_imports`.
+
+**Cause réelle :** sous `strict = true`, `disallow_untyped_calls` est vérifié au site d'appel, dans le module appelant — l'exemption d'un module cible ne remonte jamais vers ses appelants, qui restent soumis à leurs propres réglages stricts.
+
+**Fix :** ajouter un override dédié et minimal sur le module de test (`disallow_untyped_calls = false` uniquement, pas `ignore_errors`), plutôt que 19 `# type: ignore[no-untyped-call]` inline. Généralisable : tester un module legacy non typé depuis un module de test strict nécessite systématiquement un override propre au fichier de test, jamais seulement sur le module testé.
+
+## 2026-08-26 — Tests écrits sans exécution réelle : 3 bugs de test passés inaperçus au lint
+
+**Symptôme :** trois tests de `test_split_pgn_core.py`, tous lint-clean (mypy/ruff verts), échouaient à l'exécution `pytest` : une assertion comparant deux littéraux FEN identiques par erreur (no-op), un board contrivé pour être "illégal" qui restait en fait légal, un `glob("*.pgn")` qui matchait le fichier source PGN lui-même en plus des fichiers générés.
+
+**Fausse piste :** aucune — mais le risque est de considérer un fichier de test "terminé" dès que `uv run inv lint` passe.
+
+**Cause réelle :** le typage statique et le style ne valident ni la sémantique des assertions ni la justesse des fixtures — seule l'exécution réelle du test (`pytest`, pas juste le hook de lint) révèle ces classes d'erreurs.
+
+**Fix :** toujours exécuter `pytest` directement après l'écriture d'un nouveau fichier de test, jamais se fier au seul lint-clean comme critère de "terminé". Pour un besoin de "coup illégal" isolé, préférer des objets factices minimaux (duck-typing) à un état d'échiquier réel contrivé — plus fiable et plus lisible qu'une position réelle dont l'illégalité doit être vérifiée manuellement.

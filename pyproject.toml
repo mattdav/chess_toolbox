@@ -106,6 +106,13 @@ ignore_missing_imports = true
 module = ["chess_toolbox.bin.split_pgn.core"]
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+# Les tests de split_pgn.core appellent nécessairement des fonctions non
+# typées (cf. dette ci-dessus) : seule la vérification "appel non typé" est
+# désactivée, le reste du fichier de test reste vérifié normalement.
+module = ["tests.unit.test_split_pgn_core"]
+disallow_untyped_calls = false
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/chess_toolbox"]
 

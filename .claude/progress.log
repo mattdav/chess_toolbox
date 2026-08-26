@@ -603,3 +603,32 @@ plan de modernisation) : comparaison d'URL comme signal primaire,
   - .gitignore
 
 ---
+
+## Session du 2026-08-26 (suite) — chess_toolbox
+
+- Chantier 3 : couverture de tests portée à 84,11 % (seuil `fail_under = 80` atteint), 168 tests passants
+- Créés `tests/unit/test_core.py` (13), `test_main.py` (10), `test_split_pgn_core.py` (22), en complément de `test_web_fetch.py` (37, étendu), `test_utils.py` (2), `test_command_line.py` (22), `test_pgn_writer.py`, `test_utilities.py` déjà en place
+- Périmètre étendu à `split_pgn/core.py`, `__main__.py`, `utils.py` (décision utilisateur explicite) car le seuil global `fail_under = 80` s'applique à tout `src/chess_toolbox`, au-delà du périmètre initial `chessable_to_pgn/*` du spec
+- Ajouté un override mypy dédié (`tests.unit.test_split_pgn_core`, `disallow_untyped_calls = false`) pour tester `split_pgn.core` (legacy non typé) depuis un fichier de test strict, sans 19 ignores inline
+- 3 bugs de test découverts et corrigés par exécution `pytest` réelle (pas seulement lint) : comparaison FEN no-op, board "illégal" en fait légal (remplacé par doubles factices duck-typés), glob matchant le fichier PGN source
+- Fonctions Selenium explicitement exclues du périmètre (nécessitent un navigateur réel) ; `loadVariationInfo` (corps réel) et le cutoff 500-chapitres de `loadChapterInfo` restent non couverts, écart assumé une fois le seuil dépassé
+- `uv run inv lint` : vert, sauf les 2 issues okflint pré-existantes hors périmètre (`.pytest_cache/README.md`, lien cassé `ReadMe.md`)
+
+**Points signalés (hors périmètre, non corrigés) :**
+
+- `__main__.py` lignes 172-187 : branche `elif args.command == "extract-chessable"` provablement morte (toujours interceptée plus tôt via `sys.argv`) et référence `args.chessable_args`, jamais défini
+- État non commité pré-existant et sans rapport avec chantier 3, laissé intact : `.python-version`, `okf-base.yaml`, `src/chess_toolbox/bin/__init__.py`, `tests/__init__.py`, `tests/unit/__init__.py`, pointeur submodule `chessable_to_pgn` (dette antérieure documentée dans `DECISIONS.md`)
+
+**Fichiers modifiés :**
+  - pyproject.toml
+  - tests/unit/test_web_fetch.py
+  - tests/unit/test_core.py
+  - tests/unit/test_main.py
+  - tests/unit/test_split_pgn_core.py
+  - tests/unit/test_command_line.py
+  - tests/unit/test_utils.py
+  - tests/unit/test_pgn_writer.py
+  - tests/unit/test_utilities.py
+  - tests/fixtures/course_page.html
+
+---
