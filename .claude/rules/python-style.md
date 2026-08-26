@@ -26,6 +26,11 @@ Ne pas mélanger logique métier et configuration dans le même fichier.
 
 ## Qualité
 
+- Sur un `enum.Enum`, jamais de section `Attributes:` dans la docstring de
+  classe : napoleon la traduit en directives `.. attribute::`, qui entrent en
+  conflit avec la documentation par membre générée par autodoc (avertissement
+  Sphinx "duplicate object description"). Documenter chaque membre avec un
+  commentaire `#:` juste au-dessus de sa ligne.
 - Type hints obligatoires sur toutes les fonctions et méthodes publiques.
 - Docstrings au format Google sur toutes les fonctions et méthodes publiques.
 - Aucun `# noqa` ni `# type: ignore` sans commentaire justificatif sur la

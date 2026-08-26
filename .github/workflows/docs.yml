@@ -8,7 +8,6 @@ jobs:
 
     # Tâches à effectuer, comme expliquées ci-dessus
     steps:
-
       # 1. On récupère le contenu du dépôt
 
       - name: "Checkout"
@@ -31,7 +30,7 @@ jobs:
 
       - name: "Build Sphinx Doc"
         run: |
-          uv run make html
+          uv run make html SPHINXOPTS="-W --keep-going"
         working-directory: docs
 
       # 3. Déploiement sur les Github Pages
@@ -39,5 +38,5 @@ jobs:
       - name: "Deploy Github Pages"
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages     # <- Branche sur laquelle seront commités les fichiers
-          folder: docs/build/html/  # <- Dossier contenant notre documentation générée
+          branch: gh-pages # <- Branche sur laquelle seront commités les fichiers
+          folder: docs/build/html/ # <- Dossier contenant notre documentation générée

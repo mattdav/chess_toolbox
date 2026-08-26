@@ -116,25 +116,15 @@ def test(c: Context, verbose: bool = False, coverage: bool = True) -> None:
 def docs(c: Context, open_browser: bool = False) -> None:
     """Build the Sphinx documentation as HTML.
 
-    Les pages d'API sont (re)générées par sphinx-apidoc avant chaque build :
-    un nouveau module sous src/ est ainsi documenté sans qu'aucun fichier
-    .rst n'ait à être écrit ou maintenu à la main. Le dossier généré
-    (docs/code/api/) n'est pas versionné.
+    Les pages d'API sont (re)générées par sphinx-apidoc avant chaque build,
+    déclenché depuis docs/code/conf.py (hook `builder-inited`) : un nouveau
+    module sous src/ est ainsi documenté sans qu'aucun fichier .rst n'ait à
+    être écrit ou maintenu à la main, en local comme en CI. Le dossier
+    généré (docs/code/api/) n'est pas versionné.
     """
     src = Path("docs/code")
-    api = src / "api"
     out = Path("docs/build") / "html"
     out.mkdir(parents=True, exist_ok=True)
-
-    print("🗂️  Generating API pages (sphinx-apidoc)...")
-    apidoc = subprocess.run(
-        "uv run sphinx-apidoc --force --separate --module-first "
-        f'-o "{api}" src/chess_toolbox',
-        shell=True,
-    )
-    if apidoc.returncode != 0:
-        print("❌ sphinx-apidoc failed!")
-        raise SystemExit(apidoc.returncode)
 
     print("📖 Building Sphinx documentation...")
     result = subprocess.run(

@@ -30,6 +30,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 *.bat
+# Exception : script Sphinx fourni par le template, pas un artefact généré
+!docs/make.bat
 MANIFEST
 
 # PyInstaller
@@ -141,7 +143,6 @@ uv.lock
 # Utility files
 src/chess_toolbox/data/
 src/chess_toolbox/log/
-src/chess_toolbox/config/
 
 # Claude Code — portée locale uniquement
 .claude/settings.local.json

@@ -218,3 +218,23 @@ session invalide (profil Firefox vierge) → `ChessableAuthError` levée au
 préflight, message explicite, code de sortie 2, aucun fichier HTML écrit ;
 session valide (profil d'automatisation réel) → extraction normale
 inchangée, code de sortie 0.
+
+### 2026-08-25 — Dans web_fetch.py,_is_public_page/PUBLIC_PAGE_TITLE sont conservés (pas supprimés comme le texte littéral du plan le suggérait) mais narrowés au seul chemin de lecture d'un cache HTML déjà sur disque ; _warn_session_expired (print-et-continuer sur fetch réseau live) est supprimé et remplacé par ChessableAuthError
+
+**Rationale :** SPEC-session-chessable exige que le cache HTML déjà sur disque reconnu comme page publique soit toujours ignoré et refetché (FIX-cache-html-empoisonne) — cas où aucune navigation live n'a lieu, donc aucune comparaison d'URL n'est possible. Supprimer entièrement _is_public_page aurait rendu ce critère d'acceptation impossible à satisfaire.
+
+### 2026-08-25 — ensure_session() navigue vers profile/ plutôt que dashboard/ pour vérifier la validité de la session
+
+**Rationale :** Testé empiriquement avec un profil Firefox vierge (sans cookies) : dashboard/ est une route SPA qui ne redirige jamais côté serveur même sans session, rendant la comparaison d'URL inopérante. profile/ redirige fidèlement vers la racine sans session, et reste stable avec une session valide.
+
+### 2026-08-25 — --relogin est intercepté et retiré de sys.argv dans le même bloc d'interception précoce que extract-chessable (avant argparse), avant d'appeler login_and_save_cookies()
+
+**Rationale :** Cohérent avec l'interception déjà en place pour extract-chessable/chessable-start-browser/chessable-login (arguments legacy à un tiret incompatibles avec argparse).
+
+### 2026-08-26 — Documentation des membres d'enum via commentaires `#:` plutôt que `napoleon_use_ivar = True`
+
+**Rationale :** `napoleon_use_ivar = True` supprime l'avertissement de doublon napoleon/autodoc mais au prix de ne plus jamais afficher la description des membres dans le rendu HTML — il masque le symptôme sans documenter l'enum. Les commentaires `#:` (attribute docs Sphinx natifs, lus directement par autodoc) restent visibles dans le rendu et n'entrent pas en conflit avec la documentation par membre générée depuis le rst d'apidoc. Appliqué à `WindowMode`, `FetchMode`, `PgnMode`.
+
+### 2026-08-26 — Génération de l'API (`sphinx-apidoc`) déplacée dans `docs/code/conf.py` plutôt qu'ajoutée comme étape CI
+
+**Rationale :** `.github/workflows/docs.yml` n'appelait jamais `sphinx-apidoc`, seulement `sphinx-build` — en CI, `docs/code/api/` (non versionné) restait donc vide et seule la page d'index était publiée sur GitHub Pages. Ajouter un step `sphinx-apidoc` dans le workflow aurait dupliqué la commande (déjà présente dans `inv docs`) avec un risque de divergence des options entre les deux. La génération est donc déclenchée depuis `conf.py` via le hook `builder-inited` (`setup(app)`), source unique de vérité pour local et CI ; le step `sphinx-apidoc` de `tasks.py` devient redondant et est retiré.

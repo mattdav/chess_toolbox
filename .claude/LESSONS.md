@@ -115,3 +115,31 @@ depuis la Phase 4c). Leçon générale : pour un signal "comparaison d'URL
 après navigation", valider empiriquement la route choisie avec un profil
 sans session avant de la considérer fiable — certaines routes SPA ne
 redirigent pas alors que d'autres pages du même site le font.
+
+### 2026-08-25 — ensure_session() (préflight comparant l'URL de dashboard/ avant/après navigation) ne levait jamais ChessableAuthError, même testé avec un profil Firefox complètement vierge
+
+**Mauvaise piste :** Supposer un bug dans _assert_not_redirected elle-même, ou un délai d'attente insuffisant avant la comparaison d'URL.
+
+**Vraie cause :** dashboard/ est une route SPA qui reste affichée à la même URL que la session soit valide ou non — aucune redirection serveur n'a lieu sur cette route spécifique, contrairement aux pages de cours/variation qui redirigent bien vers la racine du site (confirmé par script de diagnostic isolé).
+
+**Fix :** Utiliser profile/ comme URL de vérification — confirmé par le même type de test qu'elle redirige fidèlement sans session et reste stable avec une session valide. Pour tout signal 'comparaison d'URL après navigation', valider empiriquement la route choisie avec un profil sans session avant de la considérer fiable.
+
+## 2026-08-26 — Doublons Sphinx sur les enums : napoleon traduit `Attributes:` en `.. attribute::`, en collision avec autodoc
+
+**Symptôme :** `uv run inv docs` émettait "duplicate object description ... `<unknown>:1`" sur les trois enums du projet (`WindowMode`, `FetchMode`, `PgnMode`), sans que le message n'identifie clairement le fichier source en cause.
+
+**Fausse piste :** chercher une directive `.. autoclass::` dupliquée dans le rst généré par `sphinx-apidoc`, ou une double exécution d'apidoc.
+
+**Cause réelle :** une section Google `Attributes:` dans la docstring de classe d'un `enum.Enum` est traduite par napoleon en directives `.. attribute::`, une par membre — qui entrent en collision avec la documentation par membre qu'autodoc génère déjà lui-même depuis le rst d'apidoc.
+
+**Fix :** retirer la section `Attributes:` et documenter chaque membre avec un commentaire `#:` juste au-dessus de sa ligne (voir `DECISIONS.md` pour le choix face à `napoleon_use_ivar`, qui masque le symptôme sans le corriger).
+
+## 2026-08-26 — Doc GitHub Pages sans API : `sphinx-apidoc` n'était jamais appelé en CI
+
+**Symptôme :** la documentation publiée sur GitHub Pages ne contenait que la page d'index, alors qu'un `uv run inv docs` local produit toutes les pages d'API sans erreur.
+
+**Fausse piste :** aucune — le bug était silencieux (aucun message d'erreur, `sphinx-build` seul réussit très bien sans page d'API à générer).
+
+**Cause réelle :** `.github/workflows/docs.yml` appelle uniquement `sphinx-build`, jamais `sphinx-apidoc` — `docs/code/api/` n'étant pas versionné (choix Phase 2), il est vide sur tout checkout CI propre. Seule l'invocation locale via `uv run inv docs` régénérait l'API au préalable. Même classe de bug déjà observée sur `chess_coach` (projet sœur, même template).
+
+**Fix :** générer l'API depuis `docs/code/conf.py` (hook `builder-inited`) plutôt que dans une étape CI séparée, pour que toute invocation de `sphinx-build` — locale ou CI — la déclenche automatiquement. Ajouter `-W --keep-going` au `sphinx-build` de la CI pour qu'un futur défaut similaire fasse échouer le job au lieu de publier une doc incomplète.

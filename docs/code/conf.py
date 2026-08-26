@@ -13,6 +13,8 @@
 import os
 import sys
 
+from sphinx.application import Sphinx
+
 # Le package est exposé via src/ : c'est ce dossier qu'il faut ajouter au
 # path pour qu'autodoc puisse importer le package sous son vrai nom.
 sys.path.insert(0, os.path.abspath("../../src"))
@@ -43,6 +45,11 @@ napoleon_numpy_docstring = False
 templates_path = ["_templates"]
 exclude_patterns = []
 
+# bs4.element._RawAttributeValue est une annotation interne à bs4 que
+# sphinx_autodoc_typehints ne peut pas résoudre — rien de corrigeable côté
+# chess_toolbox.
+suppress_warnings = ["sphinx_autodoc_typehints.forward_reference"]
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -65,3 +72,19 @@ autodoc_default_options = {
     "show-inheritance": True,
     "special-members": "__init__",
 }
+
+
+def _run_apidoc(app: Sphinx) -> None:
+    """Génère les pages d'API avant chaque build, en local comme en CI."""
+    from pathlib import Path
+
+    from sphinx.ext.apidoc import main
+
+    package = Path(__file__).parent.parent.parent / "src" / "chess_toolbox"
+    output = Path(__file__).parent / "api"
+    main(["--force", "--separate", "--module-first", "-o", str(output), str(package)])
+
+
+def setup(app: Sphinx) -> None:
+    """Enregistre la génération d'API sur l'événement `builder-inited`."""
+    app.connect("builder-inited", _run_apidoc)

@@ -551,3 +551,55 @@ plan de modernisation) : comparaison d'URL comme signal primaire,
 **Fichiers modifiés :** voir commit associé.
 
 ---
+
+## Session du 2026-08-25 21:56 — chess_toolbox
+
+- Implémenté la Phase 4d (dernière phase) du plan de modernisation chess_toolbox : détection d'authentification Chessable
+- web_fetch.py : ChessableAuthError, ensure_session() en préflight, _assert_not_redirected (comparaison d'URL, signal primaire) ; _warn_session_expired supprimé, _is_public_page conservé mais narrowé à la seule détection de cache HTML sur disque
+- ChessableFetcher.__enter__ appelle ensure_session(), ferme le navigateur si elle lève
+- __main__.py : sys.exit(2) sur ChessableAuthError aux deux points d'appel, option --relogin ajoutée
+- Créé tests/fixtures/chessable_public_page.html et le premier test unitaire du module (tests/unit/test_web_fetch.py)
+- Vérifié en conditions réelles (pas seulement par relecture) : profil Firefox vierge → échec préflight explicite, code 2, aucun fichier écrit ; profil authentifié réel → extraction normale, code 0
+- Bug découvert par ce test réel : ensure_session() visait dashboard/, une route SPA qui ne redirige jamais même sans session — corrigé en profile/, qui redirige fidèlement
+- Statuts SPEC-session-chessable et SPEC-alignement-template passés à implemented, Phase 4d marquée réalisée dans le plan
+- Committé en deux temps (submodule chessable_to_pgn commit 60033cb, puis dépôt parent commit 905072f), lint vert avant chaque commit
+
+**En suspens :** Vérification finale du plan (uv run chess_toolbox extract-chessable -courses 5193, cours complet) non exécutée — l'utilisateur avait précédemment indiqué qu'un cours complet prend des dizaines de minutes et à éviter pour des vérifications routinières ; à lancer par l'utilisateur ou sur demande explicite. Arbitrage du seuil de couverture (fail_under=80 dans pyproject.toml) toujours en suspens, non urgent. Phase 3 du plan ne porte toujours pas le suffixe « — réalisé » dans son en-tête alors que ses fichiers cibles existent tous ou ont été légitimement remplacés en Phase 4a — signalé sans être corrigé (hors périmètre Phase 4d).
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/__main__.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-08-26 — chess_toolbox
+
+- Chantier 1 : corrigé les trois causes d'erreurs `uv run inv docs` (Sphinx 9.1.0)
+  - Doublon napoleon/autodoc sur les enums (`WindowMode`, `FetchMode`, `PgnMode`) : section `Attributes:` remplacée par des commentaires `#:` par membre
+  - Docstrings de module cassées (`command_line.py`, `pgn_writer.py`) : indentation `Description:` legacy réécrite en prose Google-style, attribution MIT conservée
+  - Avertissement `bs4.element._RawAttributeValue` non résolu : ajouté `suppress_warnings` dans `conf.py`
+  - Vérifié : `uv run inv docs` → zéro warning, zéro erreur
+- Chantier 2 : génération de l'API Sphinx déplacée dans `docs/code/conf.py` (hook `builder-inited`), pour qu'elle se déclenche aussi bien en local qu'en CI
+  - Retiré l'étape `sphinx-apidoc` désormais redondante de la tâche `inv docs` (`tasks.py`)
+  - Ajouté `-W --keep-going` au `sphinx-build` de `.github/workflows/docs.yml`
+  - Bug additionnel découvert et corrigé (hors périmètre initial, validé avec l'utilisateur) : `docs/Makefile` et `docs/make.bat` pointaient vers `SOURCEDIR=source`, dossier inexistant (le vrai source est `docs/code`) — la CI n'aurait jamais pu construire la doc, apidoc-en-conf.py ou non. Corrigé en `SOURCEDIR=code`.
+  - Bug additionnel découvert et corrigé (hors périmètre initial, validé avec l'utilisateur) : `.gitignore` excluait entièrement `src/chess_toolbox/config/` (code source réel, jamais des secrets) et `*.bat` excluait `docs/make.bat` — ni l'un ni l'autre n'avaient jamais été suivis par git. Retiré la ligne `src/chess_toolbox/config/` et ajouté une exception `!docs/make.bat`.
+  - Vérifié : suppression de `docs/code/api/`, puis `uv run sphinx-build -W --keep-going -b html docs/code docs/build/html` seul (sans `inv`, sans appel préalable à apidoc) → l'API est régénérée, build à zéro warning
+
+**En suspens :** si le correctif conf.py (génération d'API via hook `builder-inited`) se confirme concluant en CI, il sera à rétroporter dans `project_template` et `chess_coach` — non fait depuis ce dépôt, à traiter séparément. Contenu dupliqué/non committé pré-existant repéré dans `.claude/LESSONS.md` et `.claude/DECISIONS.md` (entrées `###` du 2026-08-25 redondantes avec les entrées `##` déjà committées sur le même sujet, probablement un artefact du hook de fin de session) — signalé sans être corrigé, à nettoyer par l'utilisateur. Chantier 3 (couverture de tests à 80 %) reste à faire.
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/config/settings.py
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - docs/code/conf.py
+  - docs/Makefile
+  - docs/make.bat
+  - tasks.py
+  - .github/workflows/docs.yml
+  - .claude/rules/python-style.md
+  - .gitignore
+
+---
