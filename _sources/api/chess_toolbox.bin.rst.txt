@@ -1,0 +1,16 @@
+chess\_toolbox.bin package
+==========================
+
+.. automodule:: chess_toolbox.bin
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox.bin.chessable_to_pgn
+   chess_toolbox.bin.split_pgn

@@ -1,0 +1,1049 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.bin.chessable_to_pgn.web_fetch &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">chess_toolbox</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.bin.chessable_to_pgn.web_fetch</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for chess_toolbox.bin.chessable_to_pgn.web_fetch</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">"""</span>
+<span class="sd">Filename: web_fetch.py</span>
+<span class="sd">Author: John DeMastri (original) / adapté chess_toolbox</span>
+<span class="sd">Version: 0.6</span>
+<span class="sd">Description: Récupération HTML depuis Chessable via Selenium + Firefox.</span>
+
+<span class="sd">Deux modes d'utilisation :</span>
+
+<span class="sd">1. Mode login (``chessable-start-browser``) : ouvre Firefox avec le profil</span>
+<span class="sd">   d'automatisation dédié sur la page de login Chessable. L'utilisateur se</span>
+<span class="sd">   connecte manuellement, puis ferme Firefox. Les cookies sont persistés dans</span>
+<span class="sd">   FIREFOX_AUTOMATION_PROFILE_DIR. À lancer UNE FOIS avant le premier run.</span>
+
+<span class="sd">2. Mode scraping (``extract-chessable``) : Selenium démarre Firefox avec le</span>
+<span class="sd">   même profil persistant. Les cookies de session sont réutilisés</span>
+<span class="sd">   automatiquement — Cloudflare les accepte car ils proviennent d'un login</span>
+<span class="sd">   réel.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os.path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">BeautifulSoup</span><span class="p">,</span> <span class="n">NavigableString</span><span class="p">,</span> <span class="n">Tag</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium</span><span class="w"> </span><span class="kn">import</span> <span class="n">webdriver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.common.by</span><span class="w"> </span><span class="kn">import</span> <span class="n">By</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.firefox.options</span><span class="w"> </span><span class="kn">import</span> <span class="n">Options</span> <span class="k">as</span> <span class="n">FirefoxOptions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.firefox.service</span><span class="w"> </span><span class="kn">import</span> <span class="n">Service</span> <span class="k">as</span> <span class="n">FirefoxService</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.support</span><span class="w"> </span><span class="kn">import</span> <span class="n">expected_conditions</span> <span class="k">as</span> <span class="n">EC</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.support.ui</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebDriverWait</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess_toolbox.config.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">WindowMode</span><span class="p">,</span> <span class="n">settings</span>
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Helpers internes</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_persistent_profile_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Retourne le chemin du profil Firefox persistant pour l'automatisation.</span>
+
+<span class="sd">    Ce dossier survit entre les runs — c'est là que les cookies de session</span>
+<span class="sd">    Chessable sont conservés après le login.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin vers le dossier profil Firefox.</span>
+<span class="sd">    """</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">firefox_automation_profile_dir</span><span class="p">)</span>
+    <span class="n">profile</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">profile</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_clear_lock_files</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Supprime les fichiers de verrou Firefox laissés par un crash précédent.</span>
+
+<span class="sd">    Firefox crée ``lock`` et ``.parentlock`` dans le répertoire de profil.</span>
+<span class="sd">    S'ils persistent après un crash, Firefox refuse de démarrer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        profile_dir: Répertoire du profil Firefox.</span>
+<span class="sd">    """</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+    <span class="n">lock_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"lock"</span><span class="p">,</span> <span class="s2">".parentlock"</span><span class="p">]</span>
+    <span class="n">removed</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">lock_names</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+                <span class="n">removed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"-- Impossible de supprimer le lock </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">removed</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"-- Lock files supprimés : </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">removed</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_geckodriver</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Localise GeckoDriver dans l'ordre de priorité.</span>
+
+<span class="sd">    1. Variable d'environnement ``GECKODRIVER_PATH``</span>
+<span class="sd">    2. Retourne None → Selenium Manager le télécharge/localise automatiquement</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Chemin absolu vers geckodriver, ou None si non spécifié.</span>
+<span class="sd">    """</span>
+    <span class="n">explicit</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">geckodriver_path</span>
+    <span class="k">if</span> <span class="n">explicit</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">explicit</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">explicit</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_tag</span><span class="p">(</span><span class="n">elem</span><span class="p">:</span> <span class="n">Tag</span> <span class="o">|</span> <span class="n">NavigableString</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tag</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Force le narrowing d'un résultat bs4 vers un ``Tag``.</span>
+
+<span class="sd">    Les méthodes bs4 comme ``.find()`` retournent ``Tag | NavigableString |</span>
+<span class="sd">    None`` : ce garde-fou centralise la vérification (au lieu de la répéter</span>
+<span class="sd">    à chaque appel) et donne un message d'erreur clair si le HTML de</span>
+<span class="sd">    Chessable a changé de structure.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        elem: Résultat de ``.find()`` ou assimilé.</span>
+<span class="sd">        context: Description du nœud attendu, pour le message d'erreur.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Le même élément, typé ``Tag``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Si l'élément n'est pas un ``Tag`` (nœud absent ou texte brut).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">Tag</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Élément HTML attendu introuvable ou invalide : </span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">elem</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_attr_str</span><span class="p">(</span><span class="n">tag</span><span class="p">:</span> <span class="n">Tag</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Lit un attribut HTML de type chaîne sur un ``Tag``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tag: Élément bs4 dont on lit l'attribut.</span>
+<span class="sd">        key: Nom de l'attribut à lire.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        La valeur de l'attribut sous forme de chaîne.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Si l'attribut est absent ou n'est pas une simple chaîne</span>
+<span class="sd">            (certains attributs HTML, comme ``class``, sont multi-valués).</span>
+<span class="sd">    """</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Attribut '</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">' introuvable ou multi-valué sur &lt;</span><span class="si">{</span><span class="n">tag</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&gt;"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<div class="viewcode-block" id="ChessableAuthError">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.ChessableAuthError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChessableAuthError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Session Chessable invalide ou expirée, détectée en preflight ou en run."""</span></div>
+
+
+
+<span class="c1"># Titre de la page d'accueil publique de Chessable. Une session expirée (ou</span>
+<span class="c1"># bloquée par Cloudflare) redirige silencieusement une requête sur</span>
+<span class="c1"># /course/&lt;id&gt; vers cette page : le HTML est valide et volumineux, mais ne</span>
+<span class="c1"># contient aucun chapitre. Un fichier déjà en cache AVANT la mise en place de</span>
+<span class="c1"># la détection par URL (voir _assert_not_redirected et ensure_session</span>
+<span class="c1"># ci-dessous) peut donc contenir cette page publique : ce garde-fou détecte</span>
+<span class="c1"># ce cas au moment de la lecture du cache, où aucune navigation live n'a lieu</span>
+<span class="c1"># et où la comparaison d'URL est donc impossible (voir FIX-cache-html-empoisonne).</span>
+<span class="n">PUBLIC_PAGE_TITLE</span> <span class="o">=</span> <span class="s2">"Chessable - Where Science Meets Chess"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_public_page</span><span class="p">(</span><span class="n">html</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Indique si le HTML est la page d'accueil publique au lieu du contenu attendu.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        html: HTML reçu, ou None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        True si la page correspond à l'accueil public (session non authentifiée).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">html</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"&lt;title&gt;</span><span class="si">{</span><span class="n">PUBLIC_PAGE_TITLE</span><span class="si">}</span><span class="s2">&lt;/title&gt;"</span> <span class="ow">in</span> <span class="n">html</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_assert_not_redirected</span><span class="p">(</span><span class="n">browser</span><span class="p">:</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">Firefox</span><span class="p">,</span> <span class="n">expected_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Vérifie que la navigation n'a pas été redirigée hors de l'URL demandée.</span>
+
+<span class="sd">    Signal primaire de détection d'une session expirée (voir</span>
+<span class="sd">    SPEC-session-chessable) : indépendant de la langue ou du contenu textuel</span>
+<span class="sd">    de la page, contrairement à une détection par titre ou par marqueur HTML.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        browser: Instance Selenium juste après un ``browser.get(expected_url)``.</span>
+<span class="sd">        expected_url: URL demandée.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ChessableAuthError: Si l'URL obtenue diffère de celle demandée.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">browser</span><span class="o">.</span><span class="n">current_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ChessableAuthError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Session Chessable invalide ou expirée : &lt;</span><span class="si">{</span><span class="n">expected_url</span><span class="si">}</span><span class="s2">&gt; a été "</span>
+            <span class="sa">f</span><span class="s2">"redirigé vers &lt;</span><span class="si">{</span><span class="n">browser</span><span class="o">.</span><span class="n">current_url</span><span class="si">}</span><span class="s2">&gt;. Relancez "</span>
+            <span class="s2">"`uv run chess_toolbox chessable-login` (ou passez --relogin à "</span>
+            <span class="s2">"extract-chessable) puis réessayez."</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="ensure_session">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.ensure_session">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ensure_session</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Vérifie que la session Chessable est valide avant de traiter le moindre cours.</span>
+
+<span class="sd">    Navigue vers la page de profil (accessible uniquement en session</span>
+<span class="sd">    authentifiée) et compare l'URL obtenue à l'URL demandée.</span>
+
+<span class="sd">    Note :</span>
+<span class="sd">        ``dashboard/`` a été écarté comme URL de vérification : c'est une</span>
+<span class="sd">        route SPA qui conserve la même URL même sans session (constaté</span>
+<span class="sd">        empiriquement, aucune redirection serveur), ce qui rend la</span>
+<span class="sd">        comparaison d'URL inopérante sur cette page. ``profile/`` redirige</span>
+<span class="sd">        bien vers la racine du site en l'absence de session valide.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RuntimeError: Si appelé hors d'un bloc ``with ChessableFetcher():``.</span>
+<span class="sd">        ChessableAuthError: Si la session n'est pas valide.</span>
+<span class="sd">    """</span>
+    <span class="n">browser</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span>
+    <span class="k">if</span> <span class="n">browser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">"WebFetch.browser n'est pas initialisé — ensure_session doit "</span>
+            <span class="s2">"être appelé dans un bloc `with ChessableFetcher():`"</span>
+        <span class="p">)</span>
+    <span class="n">profile_url</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">base_chessable_url</span> <span class="o">+</span> <span class="s2">"profile/"</span>
+    <span class="n">browser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">profile_url</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">WebDriverWait</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span><span class="o">.</span><span class="n">until</span><span class="p">(</span>
+            <span class="n">EC</span><span class="o">.</span><span class="n">any_of</span><span class="p">(</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="s2">"[data-testid='user-menu']"</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">((</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="s2">".user-avatar"</span><span class="p">)),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">_assert_not_redirected</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="n">profile_url</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Login interactif (à appeler une seule fois)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="start_automation_browser">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.start_automation_browser">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">start_automation_browser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Lance Firefox avec le profil d'automatisation sur la page de login Chessable.</span>
+
+<span class="sd">    Ouvre Firefox avec un profil dédié (FIREFOX_AUTOMATION_PROFILE_DIR).</span>
+<span class="sd">    L'utilisateur se connecte à Chessable dans cette fenêtre, puis ferme</span>
+<span class="sd">    Firefox. La session est mémorisée dans le profil et réutilisée par le</span>
+<span class="sd">    scraper sans nouvelle connexion.</span>
+
+<span class="sd">    Le profil dédié est séparé du profil Firefox habituel — pas de conflit</span>
+<span class="sd">    même si Firefox est déjà ouvert.</span>
+<span class="sd">    """</span>
+    <span class="n">profile_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">_persistent_profile_dir</span><span class="p">())</span>
+
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">firefox_binary_path</span><span class="p">,</span>
+        <span class="sa">r</span><span class="s2">"C:\Program Files\Mozilla Firefox\firefox.exe"</span><span class="p">,</span>
+        <span class="sa">r</span><span class="s2">"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"LOCALAPPDATA"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span> <span class="o">/</span> <span class="s2">"Mozilla Firefox/firefox.exe"</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">firefox</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">firefox</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Firefox introuvable dans les emplacements standards."</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Définissez FIREFOX_BINARY_PATH dans .env avec le chemin exact."</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Lancement de Firefox (profil : </span><span class="si">{</span><span class="n">profile_dir</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">firefox</span><span class="p">,</span> <span class="s2">"-profile"</span><span class="p">,</span> <span class="n">profile_dir</span><span class="p">,</span> <span class="s2">"https://www.chessable.com/login/"</span><span class="p">],</span>
+        <span class="n">creationflags</span><span class="o">=</span><span class="p">(</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">DETACHED_PROCESS</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">subprocess</span><span class="p">,</span> <span class="s2">"DETACHED_PROCESS"</span><span class="p">)</span>
+            <span class="k">else</span> <span class="mi">0</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Firefox ouvert avec le profil d'automatisation."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"1. Connectez-vous à Chessable dans la fenêtre qui vient"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"   de s'ouvrir (une seule fois — la session est mémorisée)."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"2. Fermez Firefox complètement après la connexion."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"3. Lancez le scraping :"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"   uv run chess_toolbox extract-chessable -courses ID"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="login_and_save_cookies">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.login_and_save_cookies">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">login_and_save_cookies</span><span class="p">(</span><span class="n">profile_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Default"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Ouvre Firefox en mode visible et attend la connexion manuelle à Chessable.</span>
+
+<span class="sd">    Lance Firefox avec le profil persistant (FIREFOX_AUTOMATION_PROFILE_DIR),</span>
+<span class="sd">    navigue vers la page de login Chessable, puis attend que l'utilisateur</span>
+<span class="sd">    se connecte. Dès que la connexion est détectée, ferme Firefox.</span>
+
+<span class="sd">    Les cookies sont persistés dans FIREFOX_AUTOMATION_PROFILE_DIR et</span>
+<span class="sd">    réutilisés automatiquement par les runs suivants.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        profile_name: Ignoré pour Firefox, conservé pour compatibilité CLI.</span>
+<span class="sd">    """</span>
+    <span class="n">profile_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">_persistent_profile_dir</span><span class="p">())</span>
+    <span class="n">_clear_lock_files</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+    <span class="n">browser</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_build_browser</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-- Ouverture de Firefox..."</span><span class="p">)</span>
+    <span class="n">browser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"https://www.chessable.com/login/"</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Connectez-vous à Chessable dans la fenêtre qui vient de s'ouvrir."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Le programme attend automatiquement la fin de la connexion."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"(Si besoin, appuyez sur Ctrl+C ici pour forcer la fermeture.)"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">WebDriverWait</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span><span class="o">.</span><span class="n">until</span><span class="p">(</span>
+            <span class="n">EC</span><span class="o">.</span><span class="n">any_of</span><span class="p">(</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="s2">"[data-testid='user-menu']"</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">((</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="s2">".user-avatar"</span><span class="p">)),</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="s2">"a[href='/dashboard/']"</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">EC</span><span class="o">.</span><span class="n">url_contains</span><span class="p">(</span><span class="s2">"dashboard"</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"-- Connexion détectée ! Sauvegarde des cookies..."</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"-- Timeout ou interruption — fermeture de Firefox."</span><span class="p">)</span>
+
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">browser</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"-- Session sauvegardée dans : </span><span class="si">{</span><span class="n">profile_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-- Vous pouvez maintenant lancer le script normalement."</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Classe principale</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="FetchMode">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.FetchMode">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FetchMode</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Stratégie de récupération HTML depuis Chessable."""</span>
+
+    <span class="c1">#: Utilise le cache existant, ne va chercher que le manquant.</span>
+    <span class="n">FETCH_NEW</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1">#: Refetch systématiquement, écrase le cache.</span>
+    <span class="n">FETCH_ALL</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="c1">#: N'utilise que le cache, ne fait jamais de requête réseau.</span>
+    <span class="n">FETCH_NONE</span> <span class="o">=</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="WebFetch">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WebFetch</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Point d'accès HTML pour les pages Chessable (cours, chapitres, variations).</span>
+
+<span class="sd">    Toutes les méthodes sont des ``classmethod`` : l'état partagé (mode de</span>
+<span class="sd">    fetch courant, ``doFetch``) vit sur la classe elle-même.</span>
+<span class="sd">    """</span>
+
+    <span class="n">FETCH_NEW</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NEW</span>
+    <span class="n">FETCH_ALL</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_ALL</span>
+    <span class="n">FETCH_NONE</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NONE</span>
+    <span class="n">flagNames</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"update"</span><span class="p">,</span> <span class="s2">"all"</span><span class="p">,</span> <span class="s2">"none"</span><span class="p">]</span>
+
+    <span class="n">doFetch</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">FetchMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NEW</span>
+
+    <span class="n">browser</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">webdriver</span><span class="o">.</span><span class="n">Firefox</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="WebFetch.__init__">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Réinitialise le mode de fetch de la classe à ``FETCH_NEW``."""</span>
+        <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NEW</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getCourseDetail">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getCourseDetail">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCourseDetail</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Récupère la page HTML d'un cours et la liste de ses chapitres.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple ``(page cours, tags chapitre)``. La liste est vide si la</span>
+<span class="sd">            page n'a pas pu être récupérée.</span>
+<span class="sd">        """</span>
+        <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getCourseHtml</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="n">chapters</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getCourseChapters</span><span class="p">(</span><span class="n">bs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bs</span><span class="p">,</span> <span class="n">chapters</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getChapterDetail">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterDetail">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getChapterDetail</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterBs</span><span class="p">:</span> <span class="n">Tag</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Récupère la page HTML d'un chapitre et ses variations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            chapterBs: Tag ``div.chapter`` du chapitre à charger.</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple ``(page chapitre, tags variation)``.</span>
+<span class="sd">        """</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">_attr_str</span><span class="p">(</span>
+            <span class="n">_as_tag</span><span class="p">(</span><span class="n">chapterBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">href</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="s2">"lien du chapitre"</span><span class="p">),</span> <span class="s2">"href"</span>
+        <span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+        <span class="n">chapterID</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterHtml</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterID</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+        <span class="n">variations</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterVariations</span><span class="p">(</span><span class="n">bs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bs</span><span class="p">,</span> <span class="n">variations</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getCourseChapters">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getCourseChapters">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCourseChapters</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">bs</span><span class="p">:</span> <span class="n">BeautifulSoup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Liste les tags ``div.chapter`` d'une page cours.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            bs: Page HTML du cours.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Liste des tags chapitre.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">bs</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">"chapter"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getCourseName">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getCourseName">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCourseName</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">bs</span><span class="p">:</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Extrait le nom du cours depuis le ``&lt;title&gt;`` de sa page.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            bs: Page HTML du cours, ou None si non disponible.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Nom du cours, ou un texte de repli si la page est absente.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">bs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"&lt;No Course HTML Available&gt;"</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span><span class="n">bs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"title"</span><span class="p">),</span> <span class="s2">"&lt;title&gt; de la page cours"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">title</span><span class="o">.</span><span class="n">text</span><span class="p">[:</span><span class="o">-</span><span class="mi">12</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getChapterVariations">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterVariations">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getChapterVariations</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">bs</span><span class="p">:</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Liste les tags de variation d'une page chapitre.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            bs: Page HTML du chapitre, ou None si non disponible.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Liste des tags variation (vide si ``bs`` est None).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">bs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">bs</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">"variation-card__row--main"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getChapterName">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterName">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getChapterName</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="n">Tag</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Extrait le titre d'un chapitre depuis son tag.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tag: Tag ``div.chapter``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Titre du chapitre.</span>
+<span class="sd">        """</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span>
+            <span class="n">tag</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">"toBeClamped title"</span><span class="p">),</span> <span class="s2">"titre du chapitre"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">title</span><span class="o">.</span><span class="n">text</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getVariationDetailFromTag">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getVariationDetailFromTag">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVariationDetailFromTag</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variationBs</span><span class="p">:</span> <span class="n">Tag</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Charge le HTML complet d'une variation à partir de son tag résumé.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            variationBs: Tag résumé de la variation (extrait de la page chapitre).</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Liste ``[page variation, identifiant variation]``.</span>
+<span class="sd">        """</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span><span class="n">variationBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">href</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="s2">"lien de la variation"</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">link</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">_attr_str</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="s2">"href"</span><span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+        <span class="n">variationID</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Getting Variation Detail '</span><span class="si">{</span><span class="n">courseId</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">variationID</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'"</span><span class="p">)</span>
+        <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationHtml</span><span class="p">(</span><span class="n">variationID</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">bs</span><span class="p">,</span> <span class="n">variationID</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getVariationDetailFromId">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getVariationDetailFromId">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVariationDetailFromId</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variationID</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Charge le HTML complet d'une variation à partir de son identifiant.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            variationID: Identifiant de la variation.</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Liste ``[page variation, identifiant variation]``.</span>
+<span class="sd">        """</span>
+        <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationHtml</span><span class="p">(</span><span class="n">variationID</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">bs</span><span class="p">,</span> <span class="n">variationID</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getVariationHtml">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getVariationHtml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVariationHtml</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">variationId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Récupère (cache ou réseau) la page HTML d'une variation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            variationId: Identifiant de la variation.</span>
+<span class="sd">            courseId: Identifiant du cours parent (sert d'emplacement de cache).</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Page HTML de la variation, ou None en cas d'échec.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span>
+            <span class="s2">"variation"</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="s2">"course/"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">courseId</span><span class="p">),</span> <span class="kc">True</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getVariationParts">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getVariationParts">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVariationParts</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">variationBs</span><span class="p">:</span> <span class="n">Tag</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Extrait les éléments bruts d'une variation depuis sa page HTML.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            variationBs: Page HTML de la variation, ou None si non disponible.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple ``(nom, éléments de chapitre, coups, terminateurs, FEN de</span>
+<span class="sd">            départ)``. En cas d'échec de parsing, retourne un tuple de</span>
+<span class="sd">            valeurs vides/None.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">variationBs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span>
+                <span class="n">variationBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s2">"theOpeningTitle"</span><span class="p">),</span> <span class="s2">"titre de la variation"</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">text</span>
+            <span class="n">chapter</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span>
+                <span class="n">variationBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">"allOpeningDetails"</span><span class="p">),</span>
+                <span class="s2">"détails de la variation"</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">"li"</span><span class="p">)</span>
+            <span class="n">openingMoves</span> <span class="o">=</span> <span class="n">_as_tag</span><span class="p">(</span>
+                <span class="n">variationBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s2">"theOpeningMoves"</span><span class="p">),</span> <span class="s2">"coups de la variation"</span>
+            <span class="p">)</span>
+            <span class="n">moves</span> <span class="o">=</span> <span class="n">openingMoves</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">"span"</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">openingMoves</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">inputFEN</span> <span class="o">=</span> <span class="n">_attr_str</span><span class="p">(</span>
+                <span class="n">_as_tag</span><span class="p">(</span><span class="n">variationBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"input"</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s2">"inputFEN"</span><span class="p">),</span> <span class="s2">"FEN de départ"</span><span class="p">),</span>
+                <span class="s2">"value"</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">moves</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">inputFEN</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"problem parsing variation parts</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getChapterHtml">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterHtml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getChapterHtml</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Récupère (cache ou réseau) la page HTML d'un chapitre.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours parent.</span>
+<span class="sd">            chapterId: Identifiant du chapitre.</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Page HTML du chapitre, ou None en cas d'échec.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span><span class="s2">"course"</span><span class="p">,</span> <span class="n">courseId</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">chapterId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getCourseHtml">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getCourseHtml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCourseHtml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Récupère (cache ou réseau) la page HTML d'un cours.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours.</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Page HTML du cours, ou None en cas d'échec.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span><span class="s2">"course"</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.getHtml">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getHtml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getHtml</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">elementType</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">elementId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">fileroot</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+        <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Récupère du HTML Chessable, depuis le cache local ou le réseau.</span>
+
+<span class="sd">        Le comportement dépend de ``WebFetch.doFetch`` :</span>
+<span class="sd">        ``FETCH_ALL`` refetch toujours, ``FETCH_NEW`` réutilise le cache et</span>
+<span class="sd">        ne va chercher que le manquant, ``FETCH_NONE`` n'utilise que le cache.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            elementType: Type d'élément Chessable (``"course"``, ``"variation"``).</span>
+<span class="sd">            elementId: Identifiant de l'élément (peut être vide).</span>
+<span class="sd">            profileName: Profil navigateur à utiliser.</span>
+<span class="sd">            fileroot: Préfixe de chemin pour le cache (ex: ``"course/&lt;id&gt;"``).</span>
+<span class="sd">            isVar: Si True, l'élément est une variation (navigation spécifique).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTML parsé en ``BeautifulSoup``, ou None en cas d'échec ou de</span>
+<span class="sd">            session expirée.</span>
+<span class="sd">        """</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">elementType</span>
+        <span class="k">if</span> <span class="n">elementId</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">+=</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">elementId</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">base_chessable_url</span> <span class="o">+</span> <span class="n">location</span>
+        <span class="k">if</span> <span class="n">fileroot</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="n">fileroot</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">location</span>
+
+        <span class="k">if</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">==</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_ALL</span><span class="p">:</span>
+            <span class="c1"># session invalide -&gt; ChessableAuthError levée par loadHtmlFromWeb,</span>
+            <span class="c1"># aucun contenu de page publique ne peut donc atteindre ce point</span>
+            <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
+            <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">loadHtmlFromFile</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_is_public_page</span><span class="p">(</span><span class="n">pageHtml</span><span class="p">):</span>
+                <span class="c1"># Cache empoisonné par un run précédent hors session (fichier déjà</span>
+                <span class="c1"># sur disque, pas de navigation live donc pas de comparaison d'URL</span>
+                <span class="c1"># possible) : on l'ignore et on refetch plutôt que de le rejouer</span>
+                <span class="c1"># éternellement — voir FIX-cache-html-empoisonne.</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"-- cache invalide (page publique) pour &lt;</span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&gt; — refetch"</span><span class="p">)</span>
+                <span class="n">pageHtml</span> <span class="o">=</span> <span class="s2">""</span>
+            <span class="c1"># équivalent à `len(pageHtml) == 0`, mais accepte pageHtml: str | None</span>
+            <span class="c1"># après réaffectation par _fetchHtml() (mypy narrowing)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pageHtml</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">==</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NONE</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+                <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
+                <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">pageHtml</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">pageHtml</span><span class="p">,</span> <span class="s2">"html.parser"</span><span class="p">)</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fetchHtml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Charge une page Chessable via Firefox Selenium.</span>
+
+<span class="sd">        Utilise le profil persistant (FIREFOX_AUTOMATION_PROFILE_DIR) qui</span>
+<span class="sd">        contient les cookies de session Chessable après le login initial.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url: URL à charger.</span>
+<span class="sd">            profileName: Ignoré pour Firefox, conservé pour compatibilité.</span>
+<span class="sd">            isVar: Si True, clique sur le bouton de navigation variation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTML de la page, ou None en cas d'échec.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">loadHtmlFromWeb</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WebFetch.loadHtmlFromFile">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromFile">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loadHtmlFromFile</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Lit une page HTML depuis le cache local.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            location: Chemin relatif (sans extension) sous le cache HTML.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Contenu du fichier, ou chaîne vide si absent du cache.</span>
+<span class="sd">        """</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="s2">".html"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">""</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="WebFetch.writeHtmlToFile">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.writeHtmlToFile">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">writeHtmlToFile</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Écrit une page HTML dans le cache local.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            location: Chemin relatif (sans extension) sous le cache HTML.</span>
+<span class="sd">            content: Contenu à écrire, ou None si rien n'a été récupéré.</span>
+<span class="sd">        """</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span><span class="p">[:</span> <span class="n">location</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)])</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="s2">".html"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"-- returned no content from web"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_browser</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">profile_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profile_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">Firefox</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Crée une instance Firefox pilotée par Selenium.</span>
+
+<span class="sd">        Utilise le profil persistant pour conserver les cookies de session</span>
+<span class="sd">        Chessable. ``dom.webdriver.enabled`` est désactivé pour éviter la</span>
+<span class="sd">        détection par Cloudflare Bot Management. Le mode de fenêtre</span>
+<span class="sd">        (``settings.chessable_window_mode``) contrôle la visibilité : en</span>
+<span class="sd">        ``HEADLESS``, Firefox démarre sans rendu de fenêtre ; en</span>
+<span class="sd">        ``OFFSCREEN``, la fenêtre est réelle mais déplacée hors écran après</span>
+<span class="sd">        sa construction ; en ``VISIBLE``, la fenêtre reste normale.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            profile_dir: Chemin vers le dossier de profil Firefox.</span>
+<span class="sd">            profile_name: Ignoré pour Firefox, conservé pour compatibilité.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Instance :class:`selenium.webdriver.Firefox` prête à l'emploi.</span>
+<span class="sd">        """</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="n">FirefoxOptions</span><span class="p">()</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-profile"</span><span class="p">)</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+
+        <span class="n">firefox_binary</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">firefox_binary_path</span>
+        <span class="k">if</span> <span class="n">firefox_binary</span><span class="p">:</span>
+            <span class="n">options</span><span class="o">.</span><span class="n">binary_location</span> <span class="o">=</span> <span class="n">firefox_binary</span>
+
+        <span class="n">options</span><span class="o">.</span><span class="n">set_preference</span><span class="p">(</span><span class="s2">"dom.webdriver.enabled"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_window_mode</span> <span class="o">==</span> <span class="n">WindowMode</span><span class="o">.</span><span class="n">HEADLESS</span><span class="p">:</span>
+            <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--headless"</span><span class="p">)</span>
+
+        <span class="n">geckodriver</span> <span class="o">=</span> <span class="n">_find_geckodriver</span><span class="p">()</span>
+        <span class="n">service</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">FirefoxService</span><span class="p">(</span><span class="n">executable_path</span><span class="o">=</span><span class="n">geckodriver</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">geckodriver</span>
+            <span class="k">else</span> <span class="n">FirefoxService</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">browser</span> <span class="o">=</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">Firefox</span><span class="p">(</span><span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_window_mode</span> <span class="o">==</span> <span class="n">WindowMode</span><span class="o">.</span><span class="n">OFFSCREEN</span><span class="p">:</span>
+            <span class="c1"># Fenêtre réelle (pas de --headless) mais déplacée hors de tout</span>
+            <span class="c1"># écran physique — évite les particularités de rendu/fingerprint</span>
+            <span class="c1"># du vrai mode headless tout en restant invisible pour l'utilisateur.</span>
+            <span class="n">browser</span><span class="o">.</span><span class="n">set_window_position</span><span class="p">(</span><span class="o">-</span><span class="mi">32000</span><span class="p">,</span> <span class="o">-</span><span class="mi">32000</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">browser</span>
+
+<div class="viewcode-block" id="WebFetch.loadHtmlFromWeb">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromWeb">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loadHtmlFromWeb</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Charge une page Chessable et retourne son HTML.</span>
+
+<span class="sd">        Réutilise le navigateur partagé ouvert par ``ChessableFetcher`` pour</span>
+<span class="sd">        tout le run (``WebFetch.browser``) — aucun nouveau processus Firefox</span>
+<span class="sd">        n'est lancé ici.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url: URL à charger.</span>
+<span class="sd">            profileName: Ignoré pour Firefox, conservé pour compatibilité.</span>
+<span class="sd">            isVar: Si True, clique sur le bouton de navigation variation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTML de la page, ou None en cas d'échec après 3 tentatives.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError: Si appelé hors d'un bloc ``with ChessableFetcher():``.</span>
+<span class="sd">            ChessableAuthError: Si la navigation est redirigée hors de l'URL</span>
+<span class="sd">                demandée (session expirée) — pas de nouvelle tentative dans ce</span>
+<span class="sd">                cas, une session invalide ne se corrige pas en réessayant.</span>
+<span class="sd">        """</span>
+        <span class="n">browser</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span>
+        <span class="k">if</span> <span class="n">browser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">"WebFetch.browser n'est pas initialisé — loadHtmlFromWeb doit "</span>
+                <span class="s2">"être appelé dans un bloc `with ChessableFetcher():`"</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">retry</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">browser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">_css</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span>
+                    <span class="s2">"div.chapter, div.variation-card__row--main, div#controls"</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">WebDriverWait</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span><span class="o">.</span><span class="n">until</span><span class="p">(</span>
+                        <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">(</span><span class="n">_css</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+                <span class="n">_assert_not_redirected</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">isVar</span><span class="p">:</span>
+                    <span class="n">controls</span> <span class="o">=</span> <span class="n">browser</span><span class="o">.</span><span class="n">find_element</span><span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">ID</span><span class="p">,</span> <span class="s2">"controls"</span><span class="p">)</span>
+                    <span class="n">buttons</span> <span class="o">=</span> <span class="n">controls</span><span class="o">.</span><span class="n">find_elements</span><span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">TAG_NAME</span><span class="p">,</span> <span class="s2">"button"</span><span class="p">)</span>
+                    <span class="n">backClass</span> <span class="o">=</span> <span class="n">buttons</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_attribute</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+                    <span class="k">if</span> <span class="s2">"myButtonOff"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">backClass</span><span class="p">:</span>
+                        <span class="n">buttons</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+                        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">browser</span><span class="o">.</span><span class="n">page_source</span>
+
+            <span class="k">except</span> <span class="n">ChessableAuthError</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">exc_msg</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">"msg"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span> <span class="k">else</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"error in loadHtmlFromWeb for &lt;</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&gt;"</span>
+                    <span class="sa">f</span><span class="s2">" on attempt :</span><span class="si">{</span><span class="n">retry</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc_msg</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">None</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ChessableFetcher">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.ChessableFetcher">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChessableFetcher</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Gestionnaire de contexte : un seul navigateur Firefox pour tout le run.</span>
+
+<span class="sd">    Construit l'instance Firefox à l'entrée du bloc ``with``, l'expose via</span>
+<span class="sd">    ``WebFetch.browser`` pour que ``WebFetch.loadHtmlFromWeb`` la réutilise à</span>
+<span class="sd">    chaque fetch HTML, puis la ferme à la sortie du bloc.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"ChessableFetcher"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Lance Firefox, l'assigne à ``WebFetch.browser`` et vérifie la session.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            L'instance courante.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ChessableAuthError: Si la session Chessable n'est pas valide</span>
+<span class="sd">                (voir ``ensure_session``). Le navigateur est fermé avant que</span>
+<span class="sd">                l'exception ne se propage.</span>
+<span class="sd">        """</span>
+        <span class="n">profile_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">_persistent_profile_dir</span><span class="p">())</span>
+        <span class="n">_clear_lock_files</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+        <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_build_browser</span><span class="p">(</span><span class="n">profile_dir</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ensure_session</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">ChessableAuthError</span><span class="p">:</span>
+            <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+            <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">raise</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Ferme Firefox et remet ``WebFetch.browser`` à None."""</span>
+        <span class="k">if</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="n">WebFetch</span><span class="o">.</span><span class="n">browser</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

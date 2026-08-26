@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.bin.chessable_to_pgn.core &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">chess_toolbox</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.bin.chessable_to_pgn.core</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for chess_toolbox.bin.chessable_to_pgn.core</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">"""</span>
+<span class="sd">Filename: chessable-tp-pgn.py</span>
+<span class="sd">Author: John DeMastri</span>
+<span class="sd">Create Date: 2025-04-27</span>
+<span class="sd">Version: 0.3</span>
+<span class="sd">Description: Entry point and main workflow driver for the application</span>
+
+<span class="sd">License: MIT License</span>
+<span class="sd">Contact: chess@demastri.com</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">BeautifulSoup</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">command_line</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pgn_writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pgn</span><span class="p">,</span> <span class="n">PgnMode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.web_fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebFetch</span>
+
+<span class="n">profileIds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.main">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Point d'entrée principal : parse la ligne de commande et lance le traitement.</span>
+
+<span class="sd">    Dispatch vers le mode ``interactive`` (boucle de saisie) ou ``batch``</span>
+<span class="sd">    (traitement direct des cours/variations passés en argument).</span>
+<span class="sd">    """</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Chessable-to-PGN tool (c) 2025 John DeMastri"</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"--- starting ---"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+    <span class="n">processMode</span><span class="p">,</span> <span class="n">courses</span><span class="p">,</span> <span class="n">variations</span> <span class="o">=</span> <span class="n">command_line</span><span class="o">.</span><span class="n">processCommandLineParams</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">courses</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">variations</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">processMode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Could not process command line parameters.  Exiting..."</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">processMode</span> <span class="o">==</span> <span class="s2">"interactive"</span><span class="p">:</span>
+        <span class="n">quit</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">quit</span><span class="p">:</span>
+            <span class="n">quit</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">variationId</span> <span class="o">=</span> <span class="n">command_line</span><span class="o">.</span><span class="n">getNextItemToProcess</span><span class="p">()</span>
+            <span class="c1"># htmlOption: 1 = fetch new, 2 = fetch all, 3 = use existing (don't fetch)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">quit</span><span class="p">:</span>
+                <span class="n">processBatch</span><span class="p">(</span><span class="n">courseId</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">variationId</span> <span class="ow">or</span> <span class="p">[])</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">"--- HTML: "</span>
+                    <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="s2">" fetched</span><span class="se">\n</span><span class="s2">--- PGN: "</span>
+                    <span class="o">+</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="s2">" written"</span>
+                <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">processMode</span> <span class="o">==</span> <span class="s2">"batch"</span><span class="p">:</span>
+        <span class="n">processBatch</span><span class="p">(</span><span class="n">courses</span><span class="p">,</span> <span class="n">variations</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"unknown process mode &lt;"</span> <span class="o">+</span> <span class="n">processMode</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"--- complete ---"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">processMode</span> <span class="o">==</span> <span class="s2">"interactive"</span><span class="p">:</span>
+        <span class="nb">input</span><span class="p">(</span><span class="s2">"Exiting interactive mode!  Press ENTER to close this window."</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="processBatch">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.processBatch">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">processBatch</span><span class="p">(</span><span class="n">courses</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">variations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Traite une liste de cours et de variations : fetch HTML + écriture PGN.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courses: Identifiants de cours Chessable à traiter.</span>
+<span class="sd">        variations: Identifiants de variations isolées à traiter.</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">courseId</span> <span class="ow">in</span> <span class="n">courses</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">"--- Processing course "</span>
+            <span class="o">+</span> <span class="n">courseId</span>
+            <span class="o">+</span> <span class="s2">" fetch: "</span>
+            <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+            <span class="o">+</span> <span class="s2">" pgn: "</span>
+            <span class="o">+</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="c1"># print("--- getting variation html ---")</span>
+        <span class="n">courseBS</span><span class="p">,</span> <span class="n">chapters</span> <span class="o">=</span> <span class="n">loadCourseInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">)</span>
+        <span class="c1"># this first pass loads/saves all of the chapter htmls</span>
+        <span class="c1"># running single-threaded - an hour trying to get threading and</span>
+        <span class="c1"># processing failed (selenium issues)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"----------"</span><span class="p">)</span>
+
+        <span class="n">chapterResults</span> <span class="o">=</span> <span class="n">loadChapterInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapters</span><span class="p">)</span>
+        <span class="c1"># once we have the chapter details, we can load all of the variation htmls</span>
+        <span class="k">if</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">==</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span><span class="p">:</span>
+            <span class="n">appendToFile</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chapterResults</span><span class="p">)):</span>
+                <span class="n">bset</span><span class="p">,</span> <span class="n">vset</span> <span class="o">=</span> <span class="n">chapterResults</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="c1"># get each variation individually</span>
+                <span class="k">for</span> <span class="n">vi</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vset</span><span class="p">)):</span>
+                    <span class="n">thisVarDet</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromTag</span><span class="p">(</span>
+                        <span class="n">courseId</span><span class="p">,</span> <span class="n">vset</span><span class="p">[</span><span class="n">vi</span><span class="p">],</span> <span class="s2">"Default"</span>
+                    <span class="p">)</span>
+                    <span class="n">thisVarDet</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">vi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="p">[</span><span class="n">thisVarDet</span><span class="p">])</span>
+                    <span class="n">Pgn</span><span class="o">.</span><span class="n">writeCoursePgnFile</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">,</span> <span class="n">appendToFile</span><span class="p">)</span>
+                    <span class="n">appendToFile</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">==</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_AFTER</span><span class="p">:</span>
+            <span class="n">variationResults</span> <span class="o">=</span> <span class="n">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">)</span>
+            <span class="c1"># now all of the variation htmls are available locally</span>
+            <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">variationResults</span><span class="p">)</span>
+            <span class="n">Pgn</span><span class="o">.</span><span class="n">writeCoursePgnFile</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># still get the html even if we're not doing pgn...</span>
+            <span class="n">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"----------"</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">variationId</span> <span class="ow">in</span> <span class="n">variations</span><span class="p">:</span>
+        <span class="n">courseId</span> <span class="o">=</span> <span class="s2">"one-off"</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">"--- Processing variation "</span>
+            <span class="o">+</span> <span class="n">variationId</span>
+            <span class="o">+</span> <span class="s2">" fetch: "</span>
+            <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+            <span class="o">+</span> <span class="s2">" pgn: "</span>
+            <span class="o">+</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">thisVarResult</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromId</span><span class="p">(</span>
+            <span class="n">courseId</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="s2">"Default"</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">thisVarResult</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">thisVarResult</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"x.x"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">!=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_NONE</span><span class="p">:</span>
+            <span class="c1"># in this case there's no distinction between incremental / after</span>
+            <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="p">[</span><span class="n">thisVarResult</span><span class="p">])</span>
+            <span class="n">Pgn</span><span class="o">.</span><span class="n">writeVariationPgnFile</span><span class="p">(</span><span class="n">variationId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="loadCourseInfo">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.loadCourseInfo">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">loadCourseInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Récupère la page HTML d'un cours et affiche un résumé.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courseId: Identifiant du cours Chessable.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(page cours, tags chapitre)``.</span>
+<span class="sd">    """</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"--- getting course html for course "</span> <span class="o">+</span> <span class="n">courseId</span> <span class="o">+</span> <span class="s2">" ---"</span><span class="p">)</span>
+    <span class="n">courseBS</span><span class="p">,</span> <span class="n">chapters</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getCourseDetail</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="s2">"Default"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"----- found course '"</span> <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getCourseName</span><span class="p">(</span><span class="n">courseBS</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"'"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"----- read "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chapters</span><span class="p">))</span> <span class="o">+</span> <span class="s2">" chapters"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">courseBS</span><span class="p">,</span> <span class="n">chapters</span></div>
+
+
+
+<div class="viewcode-block" id="loadChapterInfo">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.loadChapterInfo">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">loadChapterInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Charge le détail HTML de chaque chapitre (jusqu'à 500).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courseId: Identifiant du cours Chessable.</span>
+<span class="sd">        chapters: Tags chapitre résumés (page cours).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Liste de ``[page chapitre, tags variation]`` par chapitre traité.</span>
+<span class="sd">    """</span>
+    <span class="n">chapterResults</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">chaptersRead</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">varsPreviewed</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chapters</span><span class="p">:</span>
+        <span class="n">thisResult</span> <span class="o">=</span> <span class="n">processChapter</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">"Default"</span><span class="p">)</span>
+        <span class="n">varsPreviewed</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">thisResult</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">chapterResults</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thisResult</span><span class="p">)</span>
+        <span class="n">chaptersRead</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">chaptersRead</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">" - total of "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">varsPreviewed</span><span class="p">)</span> <span class="o">+</span> <span class="s2">" - variations previewed - "</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">chapterResults</span></div>
+
+
+
+<div class="viewcode-block" id="loadVariationInfo">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.loadVariationInfo">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Charge le détail HTML de chaque variation de chaque chapitre (jusqu'à 5000).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courseId: Identifiant du cours Chessable.</span>
+<span class="sd">        chapterResults: Liste de ``[page chapitre, tags variation]`` par chapitre.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Liste de ``[page variation, id variation, round]`` par variation lue.</span>
+<span class="sd">    """</span>
+    <span class="n">variationResults</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">variationsRead</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">chapterNbr</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># used to build round string</span>
+    <span class="n">variationNbr</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># used to build round string</span>
+    <span class="k">for</span> <span class="n">_b</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chapterResults</span><span class="p">:</span>
+        <span class="n">chapterNbr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">variationNbr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">variation</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+            <span class="n">variationNbr</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">thisVarDet</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromTag</span><span class="p">(</span>
+                <span class="n">courseId</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="s2">"Default"</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">thisVarDet</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">" - no HTML found for variation "</span> <span class="o">+</span> <span class="n">thisVarDet</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">continue</span>
+            <span class="n">roundStr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">chapterNbr</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">variationNbr</span><span class="p">)</span>
+            <span class="n">thisVarDet</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">roundStr</span><span class="p">)</span>
+            <span class="n">variationResults</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thisVarDet</span><span class="p">)</span>
+            <span class="n">variationsRead</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">variationsRead</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">variationsRead</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">" - total of "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">variationsRead</span><span class="p">)</span> <span class="o">+</span> <span class="s2">" - variations read - "</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">variationResults</span></div>
+
+
+
+<div class="viewcode-block" id="generateCoursePGNs">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.generateCoursePGNs">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variationResults</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Génère le PGN agrégé d'un ensemble de variations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courseId: Identifiant du cours Chessable.</span>
+<span class="sd">        variationResults: Liste de ``[page variation, id variation, round]``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Le PGN concaténé de toutes les variations valides.</span>
+<span class="sd">    """</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">" Writing Course PGN file for course "</span> <span class="o">+</span> <span class="n">courseId</span><span class="p">)</span>
+    <span class="n">aggregatePgn</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">for</span> <span class="p">[</span><span class="n">variation</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="n">roundStr</span><span class="p">]</span> <span class="ow">in</span> <span class="n">variationResults</span><span class="p">:</span>
+        <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">createPgnFromHtml</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">roundStr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pgnOut</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">aggregatePgn</span> <span class="o">+=</span> <span class="n">pgnOut</span>
+    <span class="k">return</span> <span class="n">aggregatePgn</span></div>
+
+
+
+<div class="viewcode-block" id="processChapter">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.processChapter">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">processChapter</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tagStr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Reparse un tag chapitre et récupère ses variations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        courseId: Identifiant du cours Chessable.</span>
+<span class="sd">        tagStr: HTML du tag ``div.chapter`` (sérialisé en chaîne).</span>
+<span class="sd">        profileName: Profil navigateur à utiliser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Liste ``[page chapitre, tags variation]``.</span>
+<span class="sd">    """</span>
+    <span class="n">chapter</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">tagStr</span><span class="p">,</span> <span class="s2">"html.parser"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Parsing '"</span> <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterName</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"' ("</span> <span class="o">+</span> <span class="n">profileName</span> <span class="o">+</span> <span class="s2">") "</span><span class="p">)</span>
+    <span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterDetail</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">" returned  '"</span>
+        <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterName</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span>
+        <span class="o">+</span> <span class="s2">"' had ("</span>
+        <span class="o">+</span> <span class="n">profileName</span>
+        <span class="o">+</span> <span class="s2">") "</span>
+        <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">variations</span><span class="p">))</span>
+        <span class="o">+</span> <span class="s2">" variations"</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span><span class="p">]</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

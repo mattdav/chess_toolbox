@@ -1,0 +1,7 @@
+chess_toolbox
+=============
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox

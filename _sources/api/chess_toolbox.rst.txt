@@ -1,0 +1,24 @@
+chess\_toolbox package
+======================
+
+.. automodule:: chess_toolbox
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox.bin
+   chess_toolbox.config
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox.utils

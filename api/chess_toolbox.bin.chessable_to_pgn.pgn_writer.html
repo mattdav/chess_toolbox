@@ -1,0 +1,491 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.bin.chessable_to_pgn.pgn_writer module &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="chess_toolbox.bin.chessable_to_pgn.utilities module" href="chess_toolbox.bin.chessable_to_pgn.utilities.html" />
+    <link rel="prev" title="chess_toolbox.bin.chessable_to_pgn.core module" href="chess_toolbox.bin.chessable_to_pgn.core.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">chess_toolbox</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="chess_toolbox.html">chess_toolbox package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="chess_toolbox.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="chess_toolbox.bin.html">chess_toolbox.bin package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="chess_toolbox.config.html">chess_toolbox.config package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="chess_toolbox.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">chess_toolbox</a></li>
+          <li class="breadcrumb-item"><a href="chess_toolbox.html">chess_toolbox package</a></li>
+          <li class="breadcrumb-item"><a href="chess_toolbox.bin.html">chess_toolbox.bin package</a></li>
+          <li class="breadcrumb-item"><a href="chess_toolbox.bin.chessable_to_pgn.html">chess_toolbox.bin.chessable_to_pgn package</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.bin.chessable_to_pgn.pgn_writer module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-chess_toolbox.bin.chessable_to_pgn.pgn_writer">
+<span id="chess-toolbox-bin-chessable-to-pgn-pgn-writer-module"></span><h1>chess_toolbox.bin.chessable_to_pgn.pgn_writer module<a class="headerlink" href="#module-chess_toolbox.bin.chessable_to_pgn.pgn_writer" title="Link to this heading"></a></h1>
+<p>Génération du contenu PGN à partir du HTML d’une variation Chessable.</p>
+<p>Parcourt les éléments bs4 d’une variation pour en extraire l’en-tête, les
+coups et les commentaires, et produit le texte PGN correspondant.</p>
+<p>Portage du projet chessable-to-pgn de John DeMastri (MIT), v0.3,
+<a class="reference external" href="mailto:chess&#37;&#52;&#48;demastri&#46;com">chess<span>&#64;</span>demastri<span>&#46;</span>com</a>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">Pgn</span></span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Génère le contenu PGN d’une variation Chessable à partir de son HTML.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_AFTER">
+<span class="sig-name descname"><span class="pre">PGN_AFTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_AFTER" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_INCREMENTAL">
+<span class="sig-name descname"><span class="pre">PGN_INCREMENTAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_INCREMENTAL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_NONE">
+<span class="sig-name descname"><span class="pre">PGN_NONE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_NONE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_WRITE_KEY_MOVE">
+<span class="sig-name descname"><span class="pre">PGN_WRITE_KEY_MOVE</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.PGN_WRITE_KEY_MOVE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.__init__" title="Link to this definition"></a></dt>
+<dd><p>Réinitialise le mode d’écriture PGN de la classe à <code class="docutils literal notranslate"><span class="pre">PGN_INCREMENTAL</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildGameResult">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">buildGameResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.buildGameResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildGameResult" title="Link to this definition"></a></dt>
+<dd><p>Formate le terminateur de partie PGN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>result</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Résultat de la partie (ex: <code class="docutils literal notranslate"><span class="pre">&quot;1-0&quot;</span></code>).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Le résultat entouré de sauts de ligne, prêt à être concaténé au PGN.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildHeader">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">buildHeader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variationId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chapter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">result</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roundStr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FEN</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.buildHeader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildHeader" title="Link to this definition"></a></dt>
+<dd><p>Construit les tags d’en-tête PGN (Event, Site, Round, White, Black…).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>courseId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du cours Chessable.</p></li>
+<li><p><strong>variationId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant de la variation.</p></li>
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Titre de la variation.</p></li>
+<li><p><strong>chapter</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span>) – Éléments de détail du chapitre (<code class="docutils literal notranslate"><span class="pre">&lt;li&gt;</span></code> de la page variation).</p></li>
+<li><p><strong>result</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Résultat de la partie (ex: <code class="docutils literal notranslate"><span class="pre">&quot;1-0&quot;</span></code>).</p></li>
+<li><p><strong>roundStr</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Numéro de round PGN.</p></li>
+<li><p><strong>FEN</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – FEN de départ (avec compteur de coup mis à jour).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Bloc d’en-tête PGN, terminé par une ligne vide.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildMoveBody">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">buildMoveBody</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moves</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.buildMoveBody"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildMoveBody" title="Link to this definition"></a></dt>
+<dd><p>Construit récursivement le corps PGN (coups, commentaires, variations).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>moves</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span>) – Éléments HTML (spans/divs) de la séquence de coups à parcourir.</p></li>
+<li><p><strong>depth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Profondeur courante dans l’arbre des variations imbriquées.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Le texte PGN correspondant à <code class="docutils literal notranslate"><span class="pre">moves</span></code> et à ses enfants.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.createPgnFromHtml">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">createPgnFromHtml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variationId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roundStr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.createPgnFromHtml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.createPgnFromHtml" title="Link to this definition"></a></dt>
+<dd><p>Construit le PGN complet d’une variation à partir de sa page HTML.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>courseId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du cours Chessable.</p></li>
+<li><p><strong>variationId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant de la variation.</p></li>
+<li><p><strong>variation</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tag</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Page HTML de la variation, ou None si non disponible.</p></li>
+<li><p><strong>roundStr</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Numéro de round PGN (ex: <code class="docutils literal notranslate"><span class="pre">&quot;2.4&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Le PGN de la variation, ou None si le HTML n’a pas pu être exploité.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.doPgn">
+<span class="sig-name descname"><span class="pre">doPgn</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode" title="chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode"><span class="pre">PgnMode</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.doPgn" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.flagNames">
+<span class="sig-name descname"><span class="pre">flagNames</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['none',</span> <span class="pre">'incremental',</span> <span class="pre">'after']</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.flagNames" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getGameResult">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getGameResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.getGameResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getGameResult" title="Link to this definition"></a></dt>
+<dd><p>Cherche le terminateur de partie parmi les éléments de fin de variation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>result</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span>) – Éléments HTML susceptibles de contenir le terminateur.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">&quot;1-0&quot;</span></code>), ou <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code> par défaut.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getNag">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getNag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.getNag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getNag" title="Link to this definition"></a></dt>
+<dd><p>Traduit un symbole d’annotation (<code class="docutils literal notranslate"><span class="pre">!</span></code>, <code class="docutils literal notranslate"><span class="pre">?!</span></code>, <code class="docutils literal notranslate"><span class="pre">±</span></code>…) en NAG PGN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>c</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte contenant le symbole d’annotation en suffixe.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">&quot;</span> <span class="pre">$1&quot;</span></code>), ou chaîne vide si aucun
+symbole reconnu.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.isTerminator">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">isTerminator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.isTerminator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.isTerminator" title="Link to this definition"></a></dt>
+<dd><p>Indique si un texte est un terminateur de partie PGN (<code class="docutils literal notranslate"><span class="pre">1-0</span></code>, <code class="docutils literal notranslate"><span class="pre">*</span></code>…).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Texte à tester, ou None.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True si <code class="docutils literal notranslate"><span class="pre">s</span></code> (une fois nettoyé) est un terminateur reconnu.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.updateFEN">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">updateFEN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.updateFEN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.updateFEN" title="Link to this definition"></a></dt>
+<dd><p>Remplace le compteur de coups d’un FEN par le premier numéro de coup joué.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fen</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – FEN de départ de la variation.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>FEN avec le compteur de demi-coups mis à jour.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeCoursePgnFile">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">writeCoursePgnFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pgnOut</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incremental</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.writeCoursePgnFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeCoursePgnFile" title="Link to this definition"></a></dt>
+<dd><p>Écrit (ou complète) le fichier PGN agrégé d’un cours.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>courseId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du cours Chessable.</p></li>
+<li><p><strong>pgnOut</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Contenu PGN à écrire.</p></li>
+<li><p><strong>incremental</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Si True, complète le fichier existant plutôt que de
+l’écraser.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Nombre de caractères écrits.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeVariationPgnFile">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">writeVariationPgnFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variationId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pgnOut</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#Pgn.writeVariationPgnFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeVariationPgnFile" title="Link to this definition"></a></dt>
+<dd><p>Écrit le fichier PGN d’une variation extraite isolément.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variationId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant de la variation.</p></li>
+<li><p><strong>pgnOut</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Contenu PGN à écrire.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Nombre de caractères écrits.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">PgnMode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#PgnMode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<p>Stratégie d’écriture des fichiers PGN.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_AFTER">
+<span class="sig-name descname"><span class="pre">PGN_AFTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_AFTER" title="Link to this definition"></a></dt>
+<dd><p>Écrit le PGN une fois toutes les variations récupérées.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_INCREMENTAL">
+<span class="sig-name descname"><span class="pre">PGN_INCREMENTAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_INCREMENTAL" title="Link to this definition"></a></dt>
+<dd><p>Écrit le PGN au fur et à mesure, variation par variation.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_NONE">
+<span class="sig-name descname"><span class="pre">PGN_NONE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode.PGN_NONE" title="Link to this definition"></a></dt>
+<dd><p>N’écrit aucun PGN.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.escapeLastNumberInComments">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">escapeLastNumberInComments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pgn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#escapeLastNumberInComments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.escapeLastNumberInComments" title="Link to this definition"></a></dt>
+<dd><p>Échappe les commentaires PGN se terminant par un nombre isolé.</p>
+<p>ChessBase interprète un nombre en fin de commentaire comme une durée de
+coup (<code class="docutils literal notranslate"><span class="pre">%clk</span></code>/<code class="docutils literal notranslate"><span class="pre">%emt</span></code>) : on ajoute un caractère neutre (<code class="docutils literal notranslate"><span class="pre">_</span></code>) pour
+l’empêcher de consommer ce nombre.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pgn</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte PGN à corriger.</p></li>
+<li><p><strong>opens</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – Positions des accolades ouvrantes de commentaire.</p></li>
+<li><p><strong>closes</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – Positions des accolades fermantes de commentaire.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Le PGN corrigé.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastMove">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">findLastMove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pgn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#findLastMove"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastMove" title="Link to this definition"></a></dt>
+<dd><p>Localise les indices (en tokens) du dernier coup, variation et commentaire.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pgn</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte PGN à analyser.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple <code class="docutils literal notranslate"><span class="pre">(index</span> <span class="pre">du</span> <span class="pre">dernier</span> <span class="pre">coup,</span> <span class="pre">index</span> <span class="pre">de</span> <span class="pre">la</span> <span class="pre">dernière</span> <span class="pre">variation,</span> <span class="pre">index</span>
+<span class="pre">du</span> <span class="pre">dernier</span> <span class="pre">commentaire)</span></code>, en index de token (-1 si absent).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootComment">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">findLastRootComment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pgn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#findLastRootComment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootComment" title="Link to this definition"></a></dt>
+<dd><p>Localise le dernier commentaire au niveau racine (hors variations).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pgn</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte PGN à analyser.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple <code class="docutils literal notranslate"><span class="pre">(position</span> <span class="pre">du</span> <span class="pre">dernier</span> <span class="pre">commentaire</span> <span class="pre">racine</span> <span class="pre">(-1</span> <span class="pre">si</span> <span class="pre">aucun),</span>
+<span class="pre">positions</span> <span class="pre">des</span> <span class="pre">accolades</span> <span class="pre">ouvrantes,</span> <span class="pre">positions</span> <span class="pre">des</span> <span class="pre">accolades</span> <span class="pre">fermantes)</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootVariation">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">findLastRootVariation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pgn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#findLastRootVariation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootVariation" title="Link to this definition"></a></dt>
+<dd><p>Localise la dernière variation ouverte au niveau racine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pgn</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte PGN à analyser.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Position de la dernière parenthèse ouvrante racine (-1 si aucune).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.pgn_writer.insertNullMoveBeforeLastComment">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.pgn_writer.</span></span><span class="sig-name descname"><span class="pre">insertNullMoveBeforeLastComment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pgn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/pgn_writer.html#insertNullMoveBeforeLastComment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.pgn_writer.insertNullMoveBeforeLastComment" title="Link to this definition"></a></dt>
+<dd><p>Insère un coup nul avant le dernier commentaire racine si nécessaire.</p>
+<p>Contourne un bug d’import ChessBase : quand une partie se termine par
+variation puis commentaire(s) au niveau racine, ces commentaires
+s’affichent au début de la partie. Insérer un coup nul (<code class="docutils literal notranslate"><span class="pre">Z0</span></code>) juste
+avant corrige le rendu.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pgn</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Texte PGN généré pour une variation.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple <code class="docutils literal notranslate"><span class="pre">(pgn</span> <span class="pre">corrigé,</span> <span class="pre">positions</span> <span class="pre">des</span> <span class="pre">accolades</span> <span class="pre">ouvrantes,</span> <span class="pre">positions</span>
+<span class="pre">des</span> <span class="pre">accolades</span> <span class="pre">fermantes)</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="chess_toolbox.bin.chessable_to_pgn.core.html" class="btn btn-neutral float-left" title="chess_toolbox.bin.chessable_to_pgn.core module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="chess_toolbox.bin.chessable_to_pgn.utilities.html" class="btn btn-neutral float-right" title="chess_toolbox.bin.chessable_to_pgn.utilities module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,340 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.bin.chessable_to_pgn.command_line &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">chess_toolbox</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.bin.chessable_to_pgn.command_line</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for chess_toolbox.bin.chessable_to_pgn.command_line</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">"""Outils d'extraction des paramètres de ligne de commande.</span>
+
+<span class="sd">Définit les modes de traitement de l'application et fournit les commandes</span>
+<span class="sd">du mode interactif.</span>
+
+<span class="sd">Portage du projet chessable-to-pgn de John DeMastri (MIT), v0.3,</span>
+<span class="sd">chess@demastri.com.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess_toolbox.config.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utilities</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pgn_writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pgn</span><span class="p">,</span> <span class="n">PgnMode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.web_fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">FetchMode</span><span class="p">,</span> <span class="n">WebFetch</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_parser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Construit le parser des arguments legacy à un tiret de chessable-to-pgn.</span>
+
+<span class="sd">    ``add_help=False`` : l'ancien parsing manuel ne gérait pas ``-h``/``--help``</span>
+<span class="sd">    (un tel argument tombait dans le message générique "Don't know how to</span>
+<span class="sd">    apply..."), ce comportement est préservé à l'identique.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Parser configuré avec l'ensemble des flags à un tiret existants.</span>
+<span class="sd">    """</span>
+    <span class="c1"># exit_on_error=False : un flag comme -web sans valeur suivante doit rester</span>
+    <span class="c1"># gérable comme un argument invalide ordinaire (l'ancien parsing manuel</span>
+    <span class="c1"># retournait proprement (None, None, None)), pas déclencher un SystemExit.</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">add_help</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">exit_on_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-courses"</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">[])</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-variations"</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">[])</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">"-interactive"</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">"processMode"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">"store_const"</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s2">"interactive"</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">"-batch"</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">"processMode"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">"store_const"</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="s2">"batch"</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-web"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-key"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-nokey"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-pgn"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-pgnroot"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-htmlroot"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-browserbinary"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-browserprofiledir"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"-browserprofile"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parser</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_split_integer_tokens</span><span class="p">(</span><span class="n">tokens</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Sépare des tokens bruts entre identifiants entiers et le reste.</span>
+
+<span class="sd">    Reproduit le filtrage ``argIsInt`` de l'ancien parsing manuel : seuls les</span>
+<span class="sd">    tokens numériques capturés après ``-courses``/``-variations`` sont</span>
+<span class="sd">    retenus, les autres sont signalés comme arguments inconnus.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tokens: Tokens bruts capturés après le flag.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(identifiants entiers valides, tokens rejetés)``.</span>
+<span class="sd">    """</span>
+    <span class="n">valid</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span>
+    <span class="n">invalid</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">valid</span><span class="p">,</span> <span class="n">invalid</span>
+
+
+<div class="viewcode-block" id="processCommandLineParams">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.command_line.html#chess_toolbox.bin.chessable_to_pgn.command_line.processCommandLineParams">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">processCommandLineParams</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Parse ``sys.argv`` et positionne les modes globaux ``WebFetch``/``Pgn``.</span>
+
+<span class="sd">    Utilise ``argparse`` (``parse_known_args``) pour reproduire le</span>
+<span class="sd">    comportement de l'ancien parsing manuel token par token : les flags à un</span>
+<span class="sd">    seul tiret sont préservés à l'identique, et un argument inconnu affiche</span>
+<span class="sd">    un avertissement au lieu de faire échouer le programme (pas de</span>
+<span class="sd">    ``SystemExit``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(mode de traitement, liste des cours, liste des variations)``.</span>
+<span class="sd">        Retourne ``(None, None, None)`` si un argument est invalide.</span>
+<span class="sd">    """</span>
+    <span class="c1"># there really just end up being three functional  parameters</span>
+    <span class="c1"># - web  - All (overwrite), None (Use Existing), Update (Use Existing, Get the Rest)</span>
+    <span class="c1"># - pgn  - No (don't generate), Incremental (after getting a variation, do Pgn),</span>
+    <span class="c1">#   After (after getting all vars, do Pgn)</span>
+    <span class="c1"># - key (default) / noKey -  controls if the first "key" position</span>
+    <span class="c1">#   in the variation is marked in the pgn</span>
+    <span class="c1"># there are two arguments</span>
+    <span class="c1"># - list of courses - get the course, get all chapters, then all</span>
+    <span class="c1">#   variations for each course in course and course/variations</span>
+    <span class="c1"># - list of variations - get the listed variations, and place in one-off/variations</span>
+    <span class="c1"># there are a few environmental parameters</span>
+    <span class="c1"># - set html root</span>
+    <span class="c1"># - set pgn root</span>
+    <span class="c1"># - set browser binary path</span>
+    <span class="c1"># - set browser profile dir</span>
+    <span class="c1"># - set browser profile name</span>
+
+    <span class="c1"># set defaults</span>
+    <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NEW</span>
+    <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">_build_parser</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">args</span><span class="p">,</span> <span class="n">unknown</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_known_args</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">except</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- "</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span> <span class="o">+</span> <span class="s2">".  Exiting."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">processMode</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">processMode</span> <span class="ow">or</span> <span class="s2">"batch"</span>
+
+    <span class="n">courses</span><span class="p">,</span> <span class="n">badCourses</span> <span class="o">=</span> <span class="n">_split_integer_tokens</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">courses</span><span class="p">)</span>
+    <span class="n">variations</span><span class="p">,</span> <span class="n">badVariations</span> <span class="o">=</span> <span class="n">_split_integer_tokens</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">variations</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">web</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">webValue</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">web</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">webValue</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">"- Invalid argument &lt;"</span> <span class="o">+</span> <span class="n">webValue</span> <span class="o">+</span> <span class="s2">"&gt; provided for web mode.  Exiting."</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting web mode to &lt;"</span> <span class="o">+</span> <span class="n">webValue</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">=</span> <span class="n">FetchMode</span><span class="p">(</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">webValue</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">key</span><span class="p">:</span>
+        <span class="n">Pgn</span><span class="o">.</span><span class="n">PGN_WRITE_KEY_MOVE</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">nokey</span><span class="p">:</span>
+        <span class="n">Pgn</span><span class="o">.</span><span class="n">PGN_WRITE_KEY_MOVE</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">pgn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pgnValue</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pgn</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pgnValue</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">"- Invalid argument &lt;"</span> <span class="o">+</span> <span class="n">pgnValue</span> <span class="o">+</span> <span class="s2">"&gt; provided for pgn mode.  Exiting."</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting pgn mode to &lt;"</span> <span class="o">+</span> <span class="n">pgnValue</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="p">(</span><span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">pgnValue</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting pgn root location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_pgn_cache</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting html root location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">browserbinary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting browser binary location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">browserbinary</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">firefox_binary_path</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">browserbinary</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">browserprofiledir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting browser profile directory to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">browserprofiledir</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">firefox_automation_profile_dir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">browserprofiledir</span>
+
+    <span class="c1"># -browserprofile est ignoré (compatibilité) : consommé par argparse,</span>
+    <span class="c1"># aucune action supplémentaire, comme dans l'ancien parsing.</span>
+
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">badCourses</span> <span class="o">+</span> <span class="n">badVariations</span> <span class="o">+</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"- Don't know how to apply command line argument &lt;"</span> <span class="o">+</span> <span class="n">token</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">processMode</span><span class="p">,</span> <span class="n">courses</span><span class="p">,</span> <span class="n">variations</span></div>
+
+
+
+<div class="viewcode-block" id="getNextItemToProcess">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.command_line.html#chess_toolbox.bin.chessable_to_pgn.command_line.getNextItemToProcess">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">getNextItemToProcess</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Boucle interactive : demande un cours ou une variation, puis les modes.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(quitter, cours saisis, variations saisies)``. ``quitter`` est</span>
+<span class="sd">        True si l'utilisateur a demandé à sortir ('q').</span>
+<span class="sd">    """</span>
+    <span class="n">srcChoices</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"q"</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">,</span> <span class="s2">"v"</span><span class="p">]</span>
+    <span class="n">cOut</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">vOut</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">while</span> <span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">srcChoices</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">"- Enter 'c' for course, 'v' for variation, 'q' to quit: "</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">""</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s2">"c"</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"q"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"c"</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">"-- Enter the course ID: "</span><span class="p">)</span>
+            <span class="n">cOut</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"v"</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">"-- Enter the variation ID: "</span><span class="p">)</span>
+            <span class="n">vOut</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="s2">"-1"</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">)):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span>
+            <span class="s2">"--- HTML - Fetch New HTML (1-default),"</span>
+            <span class="s2">" refetch All HTML (2), use existing HTML (3), or quit (q)? "</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"q"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="c1"># real range of values is 0-2, so have to use s-1</span>
+        <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NEW</span>
+            <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"-1"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">FetchMode</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-- Web fetch mode set to "</span> <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span><span class="o">.</span><span class="n">value</span><span class="p">])</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="s2">"-1"</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">)):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span>
+            <span class="s2">"--- Write PGN - Don't (1), During HTML Processing (2-default),"</span>
+            <span class="s2">" After HTML Processing (3), or quit (q)? "</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"q"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="c1"># real range of values is 0-2, so have to use s-1</span>
+        <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span>
+            <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="s2">"-1"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">PgnMode</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-- PGN write mode set to "</span> <span class="o">+</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">flagNames</span><span class="p">[</span><span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span><span class="o">.</span><span class="n">value</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">cOut</span><span class="p">,</span> <span class="n">vOut</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

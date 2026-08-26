@@ -1,0 +1,7 @@
+chess\_toolbox.config.settings module
+=====================================
+
+.. automodule:: chess_toolbox.config.settings
+   :members:
+   :show-inheritance:
+   :undoc-members:

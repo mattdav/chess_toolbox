@@ -1,0 +1,849 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.bin.chessable_to_pgn.pgn_writer &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/modules.html">chess_toolbox</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.bin.chessable_to_pgn.pgn_writer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for chess_toolbox.bin.chessable_to_pgn.pgn_writer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">"""Génération du contenu PGN à partir du HTML d'une variation Chessable.</span>
+
+<span class="sd">Parcourt les éléments bs4 d'une variation pour en extraire l'en-tête, les</span>
+<span class="sd">coups et les commentaires, et produit le texte PGN correspondant.</span>
+
+<span class="sd">Portage du projet chessable-to-pgn de John DeMastri (MIT), v0.3,</span>
+<span class="sd">chess@demastri.com.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tag</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chess_toolbox.config.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">utilities</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.web_fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebFetch</span>
+
+<span class="n">PGN_WRITE_KEY_MOVE</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">STARTING_POSITION</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"</span>  <span class="c1"># starting position</span>
+<span class="p">)</span>
+
+<span class="n">count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">firstMove</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">firstMoveNbr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+<span class="n">lastSeenFenParts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">lastSeenSan</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+<span class="n">keyWritten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="PgnMode">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.PgnMode">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PgnMode</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Stratégie d'écriture des fichiers PGN."""</span>
+
+    <span class="c1">#: N'écrit aucun PGN.</span>
+    <span class="n">PGN_NONE</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1">#: Écrit le PGN au fur et à mesure, variation par variation.</span>
+    <span class="n">PGN_INCREMENTAL</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="c1">#: Écrit le PGN une fois toutes les variations récupérées.</span>
+    <span class="n">PGN_AFTER</span> <span class="o">=</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="Pgn">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Pgn</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Génère le contenu PGN d'une variation Chessable à partir de son HTML."""</span>
+
+    <span class="n">PGN_NONE</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_NONE</span>
+    <span class="n">PGN_INCREMENTAL</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span>
+    <span class="n">PGN_AFTER</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_AFTER</span>
+    <span class="n">flagNames</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"none"</span><span class="p">,</span> <span class="s2">"incremental"</span><span class="p">,</span> <span class="s2">"after"</span><span class="p">]</span>
+
+    <span class="n">doPgn</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">PgnMode</span><span class="p">]</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span>
+    <span class="c1"># Attribut dynamique positionné par command_line.py (-key / -nokey). Déclaré</span>
+    <span class="c1"># ici uniquement pour le typage : la valeur par défaut suit le module.</span>
+    <span class="n">PGN_WRITE_KEY_MOVE</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="n">PGN_WRITE_KEY_MOVE</span>
+
+<div class="viewcode-block" id="Pgn.__init__">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Réinitialise le mode d'écriture PGN de la classe à ``PGN_INCREMENTAL``."""</span>
+        <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">=</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span></div>
+
+
+<div class="viewcode-block" id="Pgn.createPgnFromHtml">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.createPgnFromHtml">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">createPgnFromHtml</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variationId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variation</span><span class="p">:</span> <span class="n">Tag</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">roundStr</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Construit le PGN complet d'une variation à partir de sa page HTML.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            variationId: Identifiant de la variation.</span>
+<span class="sd">            variation: Page HTML de la variation, ou None si non disponible.</span>
+<span class="sd">            roundStr: Numéro de round PGN (ex: ``"2.4"``).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le PGN de la variation, ou None si le HTML n'a pas pu être exploité.</span>
+<span class="sd">        """</span>
+        <span class="k">global</span> <span class="n">count</span>
+        <span class="k">global</span> <span class="n">firstMove</span>
+        <span class="k">global</span> <span class="n">firstMoveNbr</span>
+        <span class="k">global</span> <span class="n">keyWritten</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">firstMove</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">keyWritten</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">firstMoveNbr</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">name</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">moves</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">inputFEN</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationParts</span><span class="p">(</span><span class="n">variation</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">chapter</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">" - HTML not found for variation"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="c1"># getVariationParts() ne retourne jamais chapter non-vide sans aussi</span>
+        <span class="c1"># renseigner moves/term/inputFEN : narrowing pour mypy uniquement.</span>
+        <span class="k">assert</span> <span class="n">moves</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">term</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">inputFEN</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">inputFEN</span> <span class="o">!=</span> <span class="n">STARTING_POSITION</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Variation does not begin at starting position"</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">getGameResult</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="n">moveBody</span> <span class="o">=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">buildMoveBody</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">inputFEN</span> <span class="o">=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">updateFEN</span><span class="p">(</span><span class="n">inputFEN</span><span class="p">)</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">buildHeader</span><span class="p">(</span>
+            <span class="n">courseId</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">roundStr</span><span class="p">,</span> <span class="n">inputFEN</span>
+        <span class="p">)</span>
+        <span class="n">outPgn</span> <span class="o">=</span> <span class="n">header</span> <span class="o">+</span> <span class="n">moveBody</span>
+        <span class="c1"># there's are two odd chessbase bugs in PGN Import -</span>
+        <span class="c1">#   see included "ChessBase import issue.pgn":</span>
+        <span class="c1">#  found In CB17, v37 - May '25</span>
+        <span class="c1"># 1 - if there's are trailing comment(s) in a game</span>
+        <span class="c1">#   (nothing after it but the game terminator)</span>
+        <span class="c1">#  and just before the comment(s) is a variation, not a move,</span>
+        <span class="c1">#  THEN these trailing comment(s) will render</span>
+        <span class="c1">#  at the BEGINNING of the game, and depending on if the game</span>
+        <span class="c1">#  started from a FEN provided position or not,</span>
+        <span class="c1">#  any initial comments (before move 1) get mangled as well.</span>
+        <span class="c1">#  (This one I actually saw in the original .Net version</span>
+        <span class="c1">#  of the tool, and thought it was in my PGN generator, HA!)</span>
+        <span class="c1"># 2 - if the last thing in a comment set (incl in variations)</span>
+        <span class="c1">#   after a move is a number, CB consumes it and</span>
+        <span class="c1">#   usually displays as move time - the only exception would be</span>
+        <span class="c1">#   for %clk or %emt tags, which will never be in</span>
+        <span class="c1">#   Chessable variations.</span>
+        <span class="c1"># The workarounds, which are only slightly nasty are as follows:</span>
+        <span class="c1"># 1 - look at the last things written as pgn if it's variation,</span>
+        <span class="c1">#   comment ... n x comment ... comment terminator,</span>
+        <span class="c1">#   then insert a null move prior to the last comment so it</span>
+        <span class="c1">#   renders more correctly</span>
+        <span class="c1">#   (CB ignores whitespace anyway, might make processing</span>
+        <span class="c1">#   easier to concatenate comments (s/} {//)</span>
+        <span class="c1"># 2 - look at the last item in any comment set.  If it's a</span>
+        <span class="c1">#   number, tack on something ("_") so CB ignores it</span>
+        <span class="n">outPgn</span> <span class="o">=</span> <span class="n">outPgn</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="s2">"}  {"</span><span class="p">,</span> <span class="s2">""</span>
+        <span class="p">)</span>  <span class="c1"># clear sequential comments, CB ignores the whitespace...</span>
+        <span class="n">outPgn</span><span class="p">,</span> <span class="n">allOpens</span><span class="p">,</span> <span class="n">allCloses</span> <span class="o">=</span> <span class="n">insertNullMoveBeforeLastComment</span><span class="p">(</span><span class="n">outPgn</span><span class="p">)</span>
+        <span class="n">outPgn</span> <span class="o">=</span> <span class="n">escapeLastNumberInComments</span><span class="p">(</span><span class="n">outPgn</span><span class="p">,</span> <span class="n">allOpens</span><span class="p">,</span> <span class="n">allCloses</span><span class="p">)</span>
+        <span class="n">outPgn</span> <span class="o">+=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">buildGameResult</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">" +"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">outPgn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Pgn.updateFEN">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.updateFEN">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">updateFEN</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fen</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Remplace le compteur de coups d'un FEN par le premier numéro de coup joué.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            fen: FEN de départ de la variation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            FEN avec le compteur de demi-coups mis à jour.</span>
+<span class="sd">        """</span>
+        <span class="k">global</span> <span class="n">firstMoveNbr</span>
+
+        <span class="n">fenParts</span> <span class="o">=</span> <span class="n">fen</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">fenParts</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">firstMoveNbr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fenParts</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Pgn.buildHeader">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildHeader">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">buildHeader</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">variationId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">chapter</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+        <span class="n">result</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">roundStr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">FEN</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Construit les tags d'en-tête PGN (Event, Site, Round, White, Black...).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            variationId: Identifiant de la variation.</span>
+<span class="sd">            name: Titre de la variation.</span>
+<span class="sd">            chapter: Éléments de détail du chapitre (``&lt;li&gt;`` de la page variation).</span>
+<span class="sd">            result: Résultat de la partie (ex: ``"1-0"``).</span>
+<span class="sd">            roundStr: Numéro de round PGN.</span>
+<span class="sd">            FEN: FEN de départ (avec compteur de coup mis à jour).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Bloc d'en-tête PGN, terminé par une ligne vide.</span>
+<span class="sd">        """</span>
+
+        <span class="c1"># we have 6 pieces of info to be conveyed: course, chapter,</span>
+        <span class="c1">#   variation title, variation url, location as round, and result</span>
+        <span class="c1"># these can be mapped as:</span>
+        <span class="c1">#  result =&gt; Result</span>
+        <span class="c1">#  location =&gt; Round (4th var in 3rd chapter is 3.4)</span>
+        <span class="c1">#  course title =&gt; Event</span>
+        <span class="c1">#  variation URL =&gt; Site</span>
+        <span class="c1">#  chapter name =&gt; White</span>
+        <span class="c1">#  variation title =&gt; Black</span>
+        <span class="c1"># Most viewers break the names into first and last based on the ',' character</span>
+        <span class="c1"># We can prevent that by replacing any "," with '-'</span>
+        <span class="c1">#   (can see if this looks ok...)</span>
+        <span class="n">courseTitle</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">chapter</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">chapterTitle</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">chapter</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">variationTitle</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">variationUrl</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">base_chessable_url</span> <span class="o">+</span> <span class="s2">"variation/"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">variationId</span><span class="p">)</span>
+
+        <span class="n">header</span> <span class="o">=</span> <span class="p">(</span>
+<span class="w">            </span><span class="sd">"""[Event \"""</span><span class="s2">"</span>
+            <span class="o">+</span> <span class="n">courseTitle</span>
+            <span class="o">+</span> <span class="s2">"""</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[Site </span><span class="se">\"</span><span class="s2">"""</span>
+            <span class="o">+</span> <span class="n">variationUrl</span>
+            <span class="o">+</span> <span class="s2">"""/</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[Date </span><span class="se">\"</span><span class="s2">????.??.??</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[Round </span><span class="se">\"</span><span class="s2">"""</span>
+            <span class="o">+</span> <span class="n">roundStr</span>
+            <span class="o">+</span> <span class="s2">"""</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[White </span><span class="se">\"</span><span class="s2">"""</span>
+            <span class="o">+</span> <span class="n">chapterTitle</span>
+            <span class="o">+</span> <span class="s2">"""</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[Black </span><span class="se">\"</span><span class="s2">"""</span>
+            <span class="o">+</span> <span class="n">variationTitle</span>
+            <span class="o">+</span> <span class="s2">"""</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">[Result </span><span class="se">\"</span><span class="s2">"""</span>
+            <span class="o">+</span> <span class="n">result</span>
+            <span class="o">+</span> <span class="s2">"""</span><span class="se">\"</span><span class="s2">]</span>
+<span class="s2">"""</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">FEN</span> <span class="o">!=</span> <span class="n">STARTING_POSITION</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">+=</span> <span class="s1">'[FEN "'</span> <span class="o">+</span> <span class="n">FEN</span> <span class="o">+</span> <span class="s1">'"]</span><span class="se">\n</span><span class="s1">'</span>
+        <span class="n">header</span> <span class="o">+=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
+
+        <span class="k">return</span> <span class="n">header</span></div>
+
+
+<div class="viewcode-block" id="Pgn.buildMoveBody">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildMoveBody">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">buildMoveBody</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">moves</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Construit récursivement le corps PGN (coups, commentaires, variations).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            moves: Éléments HTML (spans/divs) de la séquence de coups à parcourir.</span>
+<span class="sd">            depth: Profondeur courante dans l'arbre des variations imbriquées.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le texte PGN correspondant à ``moves`` et à ses enfants.</span>
+<span class="sd">        """</span>
+        <span class="k">global</span> <span class="n">count</span>
+        <span class="k">global</span> <span class="n">firstMove</span>
+        <span class="k">global</span> <span class="n">firstMoveNbr</span>
+        <span class="k">global</span> <span class="n">lastSeenFenParts</span>
+        <span class="k">global</span> <span class="n">lastSeenSan</span>
+        <span class="k">global</span> <span class="n">keyWritten</span>
+
+        <span class="c1"># Notes:</span>
+        <span class="c1">#  c.text is actually recursive.  CommentInMove is not a PGN comment,</span>
+        <span class="c1">#  contains both variations and comments!!</span>
+        <span class="c1">#    when we know what we're working on, wrap variations in (), comments in {}</span>
+        <span class="c1">#  ToDo: text has some formatting &lt;h1&gt;...that should be</span>
+        <span class="c1">#  better represented in PGN comments (whether CB reads or not)</span>
+        <span class="n">outString</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># print(" " * depth + "x")</span>
+        <span class="n">outString</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="n">isWhite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"span"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="s2">"commentInVariation"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">outString</span> <span class="o">+=</span> <span class="s2">" { "</span> <span class="o">+</span> <span class="n">c</span><span class="o">.</span><span class="n">text</span> <span class="o">+</span> <span class="s2">" } "</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"div"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="p">(</span><span class="s2">"openingNum"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">isTerminator</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
+            <span class="p">):</span>
+                <span class="n">outString</span> <span class="o">+=</span> <span class="s2">"</span><span class="se">\n\n</span><span class="s2"> "</span> <span class="o">+</span> <span class="n">c</span><span class="o">.</span><span class="n">text</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n\n</span><span class="s2">"</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"div"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="p">(</span><span class="s2">"whiteMove"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">"blackMove"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">])</span>
+            <span class="p">):</span>
+                <span class="n">keyStr</span> <span class="o">=</span> <span class="s2">""</span>
+                <span class="k">if</span> <span class="n">PGN_WRITE_KEY_MOVE</span> <span class="ow">and</span> <span class="s2">"is_key"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">keyWritten</span><span class="p">:</span>
+                        <span class="n">keyWritten</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="n">keyStr</span> <span class="o">=</span> <span class="s2">" { -KEY- } "</span>
+
+                <span class="k">if</span> <span class="n">firstMove</span> <span class="ow">or</span> <span class="s2">"whiteMove"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]:</span>
+                    <span class="n">outString</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-move"</span><span class="p">]</span> <span class="o">+</span> <span class="s2">" "</span>
+                    <span class="k">if</span> <span class="n">firstMoveNbr</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">firstMoveNbr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">"data-move"</span><span class="p">][:</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-move"</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"."</span><span class="p">)])</span>
+                    <span class="n">firstMove</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="n">outString</span> <span class="o">+=</span> <span class="n">keyStr</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-san"</span><span class="p">]</span> <span class="o">+</span> <span class="s2">" "</span>
+                <span class="n">lastSeenSan</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-san"</span><span class="p">]</span>
+                <span class="n">lastSeenFenParts</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-fen"</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"span"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="s2">"commentMoveSmall"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data-san"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">fenParts</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-fen"</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="ow">not</span> <span class="n">firstMove</span> <span class="ow">and</span> <span class="n">isWhite</span> <span class="o">==</span> <span class="n">fenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">):</span>  <span class="c1"># two successive moves with the same color</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">" ### repeated move?? ### "</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-san"</span><span class="p">])</span>
+                    <span class="n">isWhite</span> <span class="o">=</span> <span class="n">fenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"b"</span>  <span class="c1"># after this move...</span>
+                    <span class="n">moveNbr</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-mid"</span><span class="p">]</span>
+                    <span class="n">moveNbr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">moveNbr</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">moveNbr</span><span class="p">:</span>
+                        <span class="c1"># data-mid absent for non-starting positions:</span>
+                        <span class="c1"># derive from FEN fullmove</span>
+                        <span class="n">fullmove</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">fenParts</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+                        <span class="n">moveNbr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">fullmove</span> <span class="k">if</span> <span class="n">isWhite</span> <span class="k">else</span> <span class="n">fullmove</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">firstMove</span> <span class="ow">and</span> <span class="p">(</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">lastSeenFenParts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">fenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">lastSeenFenParts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">):</span>
+                        <span class="c1"># this is likely enough of a check...  repeat the last move seen</span>
+                        <span class="c1"># this is a first move in a variation. it should be</span>
+                        <span class="c1"># able to replace the last move seen</span>
+                        <span class="c1"># if it's the next move. we need to repeat the prior move</span>
+                        <span class="c1"># this can be seen at the end of a game, when the author</span>
+                        <span class="c1"># provides a potential or actual continuation</span>
+                        <span class="c1"># so it's a ply behind where this move thinks it is...</span>
+                        <span class="c1"># print( "Mismatch onMove in variation ..." )</span>
+                        <span class="c1"># print( lastSeenFenParts, fenParts )</span>
+                        <span class="n">moveNbr</span> <span class="o">=</span> <span class="n">moveNbr</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">isWhite</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">moveNbr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                        <span class="n">isWhite</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">isWhite</span>
+                        <span class="n">outString</span> <span class="o">+=</span> <span class="n">moveNbr</span>
+                        <span class="k">if</span> <span class="n">isWhite</span><span class="p">:</span>
+                            <span class="n">outString</span> <span class="o">+=</span> <span class="s2">". "</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">outString</span> <span class="o">+=</span> <span class="s2">"... "</span>
+                        <span class="n">outString</span> <span class="o">+=</span> <span class="n">lastSeenSan</span> <span class="o">+</span> <span class="s2">" "</span>
+                        <span class="c1"># ok, now set up to handle this actual move</span>
+                        <span class="n">firstMove</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">isWhite</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">isWhite</span>
+
+                    <span class="k">if</span> <span class="n">firstMove</span> <span class="ow">or</span> <span class="n">isWhite</span><span class="p">:</span>
+                        <span class="n">outString</span> <span class="o">+=</span> <span class="n">moveNbr</span>
+                        <span class="k">if</span> <span class="n">isWhite</span><span class="p">:</span>
+                            <span class="n">outString</span> <span class="o">+=</span> <span class="s2">". "</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">outString</span> <span class="o">+=</span> <span class="s2">"... "</span>
+                        <span class="n">firstMove</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">outString</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-san"</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">getNag</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
+                        <span class="n">outString</span> <span class="o">+=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">getNag</span><span class="p">(</span>
+                            <span class="n">c</span><span class="o">.</span><span class="n">text</span>
+                        <span class="p">)</span>  <span class="c1"># nag could be included in display text</span>
+                    <span class="n">outString</span> <span class="o">+=</span> <span class="s2">" "</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"span"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="s2">"annotation"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data-original-title"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">"data-original-title"</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">""</span>
+                <span class="ow">and</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">getNag</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">""</span>
+            <span class="p">):</span>
+                <span class="n">outString</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">outString</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">getNag</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="s2">" "</span>
+                <span class="p">)</span>  <span class="c1"># or nag could be defined in a separate span</span>
+
+            <span class="c1"># for embedded variations, write "(" then kids pgn, then ")"</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"span"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="p">(</span><span class="s2">"commentTopvar"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">"commentSubvar"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">])</span>
+            <span class="p">):</span>
+                <span class="n">outString</span> <span class="o">+=</span> <span class="s2">" ( "</span>
+                <span class="n">firstMove</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># in any event, make sure we write any kid nodes' data</span>
+            <span class="n">kids</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">outString</span> <span class="o">+=</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">buildMoveBody</span><span class="p">(</span><span class="n">kids</span><span class="p">,</span> <span class="n">depth</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"span"</span>
+                <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"class"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="p">(</span><span class="s2">"commentTopvar"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">"commentSubvar"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s2">"class"</span><span class="p">])</span>
+            <span class="p">):</span>
+                <span class="n">outString</span> <span class="o">+=</span> <span class="s2">" ) </span><span class="se">\n</span><span class="s2">"</span>
+
+        <span class="c1"># print(" " * depth + "/x")</span>
+
+        <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">outString</span></div>
+
+
+<div class="viewcode-block" id="Pgn.getNag">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getNag">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getNag</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Traduit un symbole d'annotation (``!``, ``?!``, ``±``...) en NAG PGN.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            c: Texte contenant le symbole d'annotation en suffixe.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le NAG PGN correspondant (ex: ``" $1"``), ou chaîne vide si aucun</span>
+<span class="sd">            symbole reconnu.</span>
+<span class="sd">        """</span>
+        <span class="n">nagStrings</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"!"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">"?"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s2">"!!"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s2">"??"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s2">"!?"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+            <span class="s2">"?!"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
+            <span class="s2">"="</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
+            <span class="s2">"∞"</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+            <span class="s2">"⩲"</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span>
+            <span class="s2">"⩱"</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+            <span class="s2">"±"</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+            <span class="s2">"∓"</span><span class="p">:</span> <span class="mi">17</span><span class="p">,</span>
+            <span class="s2">"+-"</span><span class="p">:</span> <span class="mi">18</span><span class="p">,</span>
+            <span class="s2">"-+"</span><span class="p">:</span> <span class="mi">19</span><span class="p">,</span>
+            <span class="s2">"⇆"</span><span class="p">:</span> <span class="mi">132</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="p">:]</span> <span class="ow">in</span> <span class="n">nagStrings</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">" $"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nagStrings</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="p">:]])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span> <span class="ow">in</span> <span class="n">nagStrings</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">" $"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nagStrings</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]])</span>
+        <span class="c1"># note, this can occur in the next child after the move text:</span>
+        <span class="c1">#   &lt;span class="annotation" data-original-title="Good move"&gt;!&lt;/span&gt;</span>
+        <span class="k">return</span> <span class="s2">""</span></div>
+
+
+<div class="viewcode-block" id="Pgn.isTerminator">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.isTerminator">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">isTerminator</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Indique si un texte est un terminateur de partie PGN (``1-0``, ``*``...).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s: Texte à tester, ou None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True si ``s`` (une fois nettoyé) est un terminateur reconnu.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">termStrings</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"*"</span><span class="p">,</span> <span class="s2">"1-0"</span><span class="p">,</span> <span class="s2">"0-1"</span><span class="p">,</span> <span class="s2">"1/2-1/2"</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">in</span> <span class="n">termStrings</span></div>
+
+
+<div class="viewcode-block" id="Pgn.writeCoursePgnFile">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeCoursePgnFile">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">writeCoursePgnFile</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">incremental</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Écrit (ou complète) le fichier PGN agrégé d'un cours.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            courseId: Identifiant du cours Chessable.</span>
+<span class="sd">            pgnOut: Contenu PGN à écrire.</span>
+<span class="sd">            incremental: Si True, complète le fichier existant plutôt que de</span>
+<span class="sd">                l'écraser.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Nombre de caractères écrits.</span>
+<span class="sd">        """</span>
+        <span class="n">course_path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_pgn_cache</span> <span class="o">+</span> <span class="s2">"course/"</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="s2">"a"</span> <span class="k">if</span> <span class="n">incremental</span> <span class="k">else</span> <span class="s2">"w"</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">course_path</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">course_path</span> <span class="o">+</span> <span class="n">courseId</span> <span class="o">+</span> <span class="s2">".pgn"</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pgnOut</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Pgn.writeVariationPgnFile">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.writeVariationPgnFile">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">writeVariationPgnFile</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">variationId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Écrit le fichier PGN d'une variation extraite isolément.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            variationId: Identifiant de la variation.</span>
+<span class="sd">            pgnOut: Contenu PGN à écrire.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Nombre de caractères écrits.</span>
+<span class="sd">        """</span>
+        <span class="n">variation_path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_pgn_cache</span> <span class="o">+</span> <span class="s2">"variation/"</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">variation_path</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">variation_path</span> <span class="o">+</span> <span class="n">variationId</span> <span class="o">+</span> <span class="s2">".pgn"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pgnOut</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Pgn.buildGameResult">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.buildGameResult">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">buildGameResult</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Formate le terminateur de partie PGN.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            result: Résultat de la partie (ex: ``"1-0"``).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le résultat entouré de sauts de ligne, prêt à être concaténé au PGN.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2"> "</span> <span class="o">+</span> <span class="n">result</span> <span class="o">+</span> <span class="s2">" </span><span class="se">\n\n</span><span class="s2">"</span></div>
+
+
+<div class="viewcode-block" id="Pgn.getGameResult">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.Pgn.getGameResult">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getGameResult</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Cherche le terminateur de partie parmi les éléments de fin de variation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            result: Éléments HTML susceptibles de contenir le terminateur.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le terminateur trouvé (ex: ``"1-0"``), ou ``"*"`` par défaut.</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">isTerminator</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">text</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"*"</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="insertNullMoveBeforeLastComment">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.insertNullMoveBeforeLastComment">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">insertNullMoveBeforeLastComment</span><span class="p">(</span><span class="n">pgn</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Insère un coup nul avant le dernier commentaire racine si nécessaire.</span>
+
+<span class="sd">    Contourne un bug d'import ChessBase : quand une partie se termine par</span>
+<span class="sd">    variation puis commentaire(s) au niveau racine, ces commentaires</span>
+<span class="sd">    s'affichent au début de la partie. Insérer un coup nul (``Z0``) juste</span>
+<span class="sd">    avant corrige le rendu.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pgn: Texte PGN généré pour une variation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(pgn corrigé, positions des accolades ouvrantes, positions</span>
+<span class="sd">        des accolades fermantes)``.</span>
+<span class="sd">    """</span>
+    <span class="c1"># the specific case I'm looking for is if, at the root level,</span>
+    <span class="c1"># the last things in the file are variation, then comment</span>
+    <span class="c1"># if so, insert a null move just before the last comment</span>
+    <span class="n">iComment</span><span class="p">,</span> <span class="n">allOpens</span><span class="p">,</span> <span class="n">allCloses</span> <span class="o">=</span> <span class="n">findLastRootComment</span><span class="p">(</span><span class="n">pgn</span><span class="p">)</span>
+    <span class="n">lastMove</span><span class="p">,</span> <span class="n">lastVariation</span><span class="p">,</span> <span class="n">lastComment</span> <span class="o">=</span> <span class="n">findLastMove</span><span class="p">(</span><span class="n">pgn</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">lastMove</span> <span class="o">&lt;</span> <span class="n">lastVariation</span> <span class="o">&lt;</span> <span class="n">lastComment</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">" - found a game with move - variation - comment ending"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pgn</span><span class="p">[:</span><span class="n">iComment</span><span class="p">]</span> <span class="o">+</span> <span class="s2">" Z0 "</span> <span class="o">+</span> <span class="n">pgn</span><span class="p">[</span><span class="n">iComment</span><span class="p">:],</span> <span class="n">allOpens</span><span class="p">,</span> <span class="n">allCloses</span>
+    <span class="k">return</span> <span class="n">pgn</span><span class="p">,</span> <span class="n">allOpens</span><span class="p">,</span> <span class="n">allCloses</span></div>
+
+
+
+<div class="viewcode-block" id="escapeLastNumberInComments">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.escapeLastNumberInComments">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">escapeLastNumberInComments</span><span class="p">(</span><span class="n">pgn</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">opens</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">closes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Échappe les commentaires PGN se terminant par un nombre isolé.</span>
+
+<span class="sd">    ChessBase interprète un nombre en fin de commentaire comme une durée de</span>
+<span class="sd">    coup (``%clk``/``%emt``) : on ajoute un caractère neutre (``_``) pour</span>
+<span class="sd">    l'empêcher de consommer ce nombre.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pgn: Texte PGN à corriger.</span>
+<span class="sd">        opens: Positions des accolades ouvrantes de commentaire.</span>
+<span class="sd">        closes: Positions des accolades fermantes de commentaire.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Le PGN corrigé.</span>
+<span class="sd">    """</span>
+    <span class="n">curStart</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">outPgn</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">curOpen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">thisClose</span> <span class="ow">in</span> <span class="n">closes</span><span class="p">:</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">opens</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">curOpen</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">opens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">thisClose</span><span class="p">):</span>
+            <span class="n">curOpen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">opens</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">opens</span> <span class="o">=</span> <span class="n">opens</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">thisOpen</span> <span class="o">=</span> <span class="n">curOpen</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="c1"># here thisopen, thisClose are the current nested comment we're dealing with.</span>
+        <span class="c1"># if the next open is only 3 away "}  {", we don't have to worry about this pair</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pgn</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">thisClose</span> <span class="o">+</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">pgn</span><span class="p">[</span><span class="n">thisClose</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"{"</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="c1"># ok - not followed by another comment, let's see if</span>
+        <span class="c1"># the last elt in this set is a number</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">pgn</span><span class="p">[</span><span class="n">thisOpen</span><span class="p">:</span><span class="n">thisClose</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">utilities</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]):</span>
+            <span class="c1"># we have to escape this.</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">" Found a comment set ending in a number"</span><span class="p">)</span>
+            <span class="n">outPgn</span> <span class="o">=</span> <span class="n">outPgn</span> <span class="o">+</span> <span class="n">pgn</span><span class="p">[</span><span class="n">curStart</span> <span class="p">:</span> <span class="n">thisClose</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">" { _ } "</span>
+            <span class="n">curStart</span> <span class="o">=</span> <span class="n">thisClose</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">outPgn</span> <span class="o">=</span> <span class="n">outPgn</span> <span class="o">+</span> <span class="n">pgn</span><span class="p">[</span><span class="n">curStart</span><span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">outPgn</span></div>
+
+
+
+<div class="viewcode-block" id="findLastRootComment">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootComment">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">findLastRootComment</span><span class="p">(</span><span class="n">pgn</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Localise le dernier commentaire au niveau racine (hors variations).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pgn: Texte PGN à analyser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(position du dernier commentaire racine (-1 si aucun),</span>
+<span class="sd">        positions des accolades ouvrantes, positions des accolades fermantes)``.</span>
+<span class="sd">    """</span>
+    <span class="n">opens</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">closes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">curLast</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pgn</span><span class="p">)):</span>
+        <span class="n">ch</span> <span class="o">=</span> <span class="n">pgn</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">"("</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">")"</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">"{"</span><span class="p">:</span>
+            <span class="n">opens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">curLast</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">"}"</span><span class="p">:</span>
+            <span class="n">closes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">curLast</span><span class="p">,</span> <span class="n">opens</span><span class="p">,</span> <span class="n">closes</span></div>
+
+
+
+<div class="viewcode-block" id="findLastRootVariation">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastRootVariation">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">findLastRootVariation</span><span class="p">(</span><span class="n">pgn</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Localise la dernière variation ouverte au niveau racine.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pgn: Texte PGN à analyser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Position de la dernière parenthèse ouvrante racine (-1 si aucune).</span>
+<span class="sd">    """</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">curLast</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pgn</span><span class="p">)):</span>
+        <span class="n">ch</span> <span class="o">=</span> <span class="n">pgn</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">"("</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">curLast</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">")"</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">curLast</span></div>
+
+
+
+<div class="viewcode-block" id="findLastMove">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.pgn_writer.html#chess_toolbox.bin.chessable_to_pgn.pgn_writer.findLastMove">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">findLastMove</span><span class="p">(</span><span class="n">pgn</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Localise les indices (en tokens) du dernier coup, variation et commentaire.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pgn: Texte PGN à analyser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple ``(index du dernier coup, index de la dernière variation, index</span>
+<span class="sd">        du dernier commentaire)``, en index de token (-1 si absent).</span>
+<span class="sd">    """</span>
+    <span class="n">lastMove</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">lastVariation</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">lastComment</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="n">inComment</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">inVariation</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">inTag</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">depth</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">pgn</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)):</span>
+        <span class="n">part</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">"{"</span><span class="p">:</span>
+            <span class="n">inComment</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">lastComment</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">elif</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">"}"</span><span class="p">:</span>
+            <span class="n">inComment</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">"("</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">inVariation</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">lastVariation</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">")"</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">inVariation</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="n">part</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"["</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inTag</span><span class="p">:</span>
+            <span class="n">inTag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">part</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"]"</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">inTag</span><span class="p">:</span>
+            <span class="n">inTag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">depth</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inComment</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inVariation</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inTag</span>
+        <span class="p">):</span>  <span class="c1"># possible move</span>
+            <span class="k">if</span> <span class="n">part</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span> <span class="o">==</span> <span class="s2">"."</span><span class="p">:</span>  <span class="c1"># move number</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">part</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"$"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># diacritic</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">"Z0"</span><span class="p">:</span>  <span class="c1"># null move</span>
+                <span class="k">continue</span>
+            <span class="n">lastMove</span> <span class="o">=</span> <span class="n">i</span>  <span class="c1"># what else could it be...</span>
+
+    <span class="k">return</span> <span class="n">lastMove</span><span class="p">,</span> <span class="n">lastVariation</span><span class="p">,</span> <span class="n">lastComment</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

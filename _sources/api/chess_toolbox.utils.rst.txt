@@ -1,0 +1,7 @@
+chess\_toolbox.utils module
+===========================
+
+.. automodule:: chess_toolbox.utils
+   :members:
+   :show-inheritance:
+   :undoc-members:

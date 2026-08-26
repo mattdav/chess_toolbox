@@ -1,0 +1,15 @@
+chess\_toolbox.bin.split\_pgn package
+=====================================
+
+.. automodule:: chess_toolbox.bin.split_pgn
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox.bin.split_pgn.core

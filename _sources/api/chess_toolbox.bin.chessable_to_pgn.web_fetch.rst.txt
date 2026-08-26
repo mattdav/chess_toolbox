@@ -1,0 +1,7 @@
+chess\_toolbox.bin.chessable\_to\_pgn.web\_fetch module
+=======================================================
+
+.. automodule:: chess_toolbox.bin.chessable_to_pgn.web_fetch
+   :members:
+   :show-inheritance:
+   :undoc-members:

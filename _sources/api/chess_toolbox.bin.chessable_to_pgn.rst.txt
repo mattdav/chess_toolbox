@@ -1,0 +1,19 @@
+chess\_toolbox.bin.chessable\_to\_pgn package
+=============================================
+
+.. automodule:: chess_toolbox.bin.chessable_to_pgn
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   chess_toolbox.bin.chessable_to_pgn.command_line
+   chess_toolbox.bin.chessable_to_pgn.core
+   chess_toolbox.bin.chessable_to_pgn.pgn_writer
+   chess_toolbox.bin.chessable_to_pgn.utilities
+   chess_toolbox.bin.chessable_to_pgn.web_fetch

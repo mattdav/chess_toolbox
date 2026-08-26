@@ -1,0 +1,147 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chess_toolbox.config.settings &mdash; chess_toolbox 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            chess_toolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">chess_toolbox</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">chess_toolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">chess_toolbox.config.settings</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for chess_toolbox.config.settings</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Configuration typée du projet, chargée depuis l'environnement et `.env`."""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span><span class="p">,</span> <span class="n">SettingsConfigDict</span>
+
+
+<div class="viewcode-block" id="WindowMode">
+<a class="viewcode-back" href="../../../api/chess_toolbox.config.settings.html#chess_toolbox.config.settings.WindowMode">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WindowMode</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Mode d'affichage de la fenêtre Firefox pour l'automatisation Chessable."""</span>
+
+    <span class="c1">#: Fenêtre réelle (pas de ``--headless``) mais positionnée hors de tout</span>
+    <span class="c1">#: écran physique après sa construction — invisible pour l'utilisateur</span>
+    <span class="c1">#: sans les particularités de rendu/fingerprint du vrai mode headless.</span>
+    <span class="n">OFFSCREEN</span> <span class="o">=</span> <span class="s2">"offscreen"</span>
+    <span class="c1">#: Navigateur sans rendu de fenêtre (``--headless``).</span>
+    <span class="n">HEADLESS</span> <span class="o">=</span> <span class="s2">"headless"</span>
+    <span class="c1">#: Fenêtre normale, visible à l'écran.</span>
+    <span class="n">VISIBLE</span> <span class="o">=</span> <span class="s2">"visible"</span></div>
+
+
+
+<div class="viewcode-block" id="Settings">
+<a class="viewcode-back" href="../../../api/chess_toolbox.config.settings.html#chess_toolbox.config.settings.Settings">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Settings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Paramètres d'automatisation Chessable (navigateur, profils, caches).</span>
+
+<span class="sd">    Les champs correspondent aux variables d'environnement de même nom en</span>
+<span class="sd">    MAJUSCULES (`firefox_binary_path` -&gt; `FIREFOX_BINARY_PATH`), chargées</span>
+<span class="sd">    depuis `.env` à la racine du projet.</span>
+<span class="sd">    """</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">SettingsConfigDict</span><span class="p">(</span><span class="n">env_file</span><span class="o">=</span><span class="s2">".env"</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">)</span>
+
+    <span class="n">base_chessable_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"https://www.chessable.com/"</span>
+    <span class="n">firefox_binary_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">firefox_automation_profile_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"C:/tools/firefox-automation-profile"</span>
+    <span class="n">geckodriver_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">chessable_html_cache</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"./html/"</span>
+    <span class="n">chessable_pgn_cache</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"./pgn/"</span>
+    <span class="n">chessable_window_mode</span><span class="p">:</span> <span class="n">WindowMode</span> <span class="o">=</span> <span class="n">WindowMode</span><span class="o">.</span><span class="n">OFFSCREEN</span></div>
+
+
+
+<span class="n">settings</span> <span class="o">=</span> <span class="n">Settings</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Matthieu Daviaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
