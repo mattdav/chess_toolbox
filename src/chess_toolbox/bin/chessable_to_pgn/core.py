@@ -10,6 +10,7 @@ License: MIT License
 Contact: chess@demastri.com
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -21,6 +22,24 @@ from .pgn_writer import Pgn, PgnMode
 from .web_fetch import WebFetch
 
 profileIds: list[str] = []
+
+
+@dataclass
+class ChapterResult:
+    """Résultat du traitement d'un chapitre.
+
+    Attributes:
+        soup: Page HTML du chapitre, ou None si non disponible.
+        variations: Tags des variations trouvées.
+        expected: Nombre de variations attendu (oracle ``variationStats``),
+            ou None si absent ou illisible.
+        name: Titre du chapitre.
+    """
+
+    soup: BeautifulSoup | None
+    variations: list[Any]
+    expected: int | None
+    name: str
 
 
 @beartype
@@ -93,7 +112,7 @@ def processBatch(courses: list[str], variations: list[str]) -> None:
         if Pgn.doPgn == PgnMode.PGN_INCREMENTAL:
             appendToFile = False
             for i in range(len(chapterResults)):
-                bset, vset = chapterResults[i]
+                vset = chapterResults[i].variations
                 # get each variation individually
                 for vi in range(len(vset)):
                     thisVarDet = WebFetch.getVariationDetailFromTag(
@@ -154,7 +173,7 @@ def loadCourseInfo(courseId: str) -> tuple[BeautifulSoup | None, list[Any]]:
 
 
 @beartype
-def loadChapterInfo(courseId: str, chapters: list[Any]) -> list[Any]:
+def loadChapterInfo(courseId: str, chapters: list[Any]) -> list[ChapterResult]:
     """Charge le détail HTML de chaque chapitre (jusqu'à 500).
 
     Args:
@@ -162,15 +181,15 @@ def loadChapterInfo(courseId: str, chapters: list[Any]) -> list[Any]:
         chapters: Tags chapitre résumés (page cours).
 
     Returns:
-        Liste de ``[page chapitre, tags variation]`` par chapitre traité.
+        Liste de ``ChapterResult`` par chapitre traité.
     """
-    chapterResults = []
+    chapterResults: list[ChapterResult] = []
 
     chaptersRead = 0
     varsPreviewed = 0
     for c in chapters:
         thisResult = processChapter(courseId, str(c), "Default")
-        varsPreviewed += len(thisResult[1])
+        varsPreviewed += len(thisResult.variations)
         chapterResults.append(thisResult)
         chaptersRead += 1
         if chaptersRead > 500:
@@ -180,12 +199,12 @@ def loadChapterInfo(courseId: str, chapters: list[Any]) -> list[Any]:
 
 
 @beartype
-def loadVariationInfo(courseId: str, chapterResults: list[Any]) -> list[Any]:
+def loadVariationInfo(courseId: str, chapterResults: list[ChapterResult]) -> list[Any]:
     """Charge le détail HTML de chaque variation de chaque chapitre (jusqu'à 5000).
 
     Args:
         courseId: Identifiant du cours Chessable.
-        chapterResults: Liste de ``[page chapitre, tags variation]`` par chapitre.
+        chapterResults: Liste de ``ChapterResult`` par chapitre.
 
     Returns:
         Liste de ``[page variation, id variation, round]`` par variation lue.
@@ -195,10 +214,10 @@ def loadVariationInfo(courseId: str, chapterResults: list[Any]) -> list[Any]:
     variationsRead = 0
     chapterNbr = 0  # used to build round string
     variationNbr = 0  # used to build round string
-    for _b, v in chapterResults:
+    for chapterResult in chapterResults:
         chapterNbr += 1
         variationNbr = 0
-        for variation in v:
+        for variation in chapterResult.variations:
             variationNbr += 1
             thisVarDet = WebFetch.getVariationDetailFromTag(
                 courseId, variation, "Default"
@@ -239,7 +258,7 @@ def generateCoursePGNs(courseId: str, variationResults: list[Any]) -> str:
 
 
 @beartype
-def processChapter(courseId: str, tagStr: str, profileName: str) -> list[Any]:
+def processChapter(courseId: str, tagStr: str, profileName: str) -> ChapterResult:
     """Reparse un tag chapitre et récupère ses variations.
 
     Args:
@@ -248,21 +267,26 @@ def processChapter(courseId: str, tagStr: str, profileName: str) -> list[Any]:
         profileName: Profil navigateur à utiliser.
 
     Returns:
-        Liste ``[page chapitre, tags variation]``.
+        Résultat du traitement du chapitre.
     """
     chapter = BeautifulSoup(tagStr, "html.parser")
-    print("Parsing '" + WebFetch.getChapterName(chapter) + "' (" + profileName + ") ")
-    chapterBS, variations = WebFetch.getChapterDetail(courseId, chapter, profileName)
+    name = WebFetch.getChapterName(chapter)
+    print("Parsing '" + name + "' (" + profileName + ") ")
+    chapterBS, variations, expected = WebFetch.getChapterDetail(
+        courseId, chapter, profileName
+    )
     print(
         " returned  '"
-        + WebFetch.getChapterName(chapter)
+        + name
         + "' had ("
         + profileName
         + ") "
         + str(len(variations))
         + " variations"
     )
-    return [chapterBS, variations]
+    return ChapterResult(
+        soup=chapterBS, variations=variations, expected=expected, name=name
+    )
 
 
 if __name__ == "__main__":

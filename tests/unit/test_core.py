@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 from chess_toolbox.bin.chessable_to_pgn import command_line, core
 from chess_toolbox.bin.chessable_to_pgn.core import (
+    ChapterResult,
     generateCoursePGNs,
     loadChapterInfo,
     loadCourseInfo,
@@ -61,14 +62,23 @@ class TestLoadChapterInfo:
 
         def _fake_process_chapter(
             courseId: str, tagStr: str, profileName: str
-        ) -> list[Any]:
+        ) -> ChapterResult:
             calls.append(tagStr)
-            return [None, ["v1", "v2"]]
+            return ChapterResult(
+                soup=None, variations=["v1", "v2"], expected=None, name="chap"
+            )
 
         monkeypatch.setattr(core, "processChapter", _fake_process_chapter)
         result = loadChapterInfo("123", ["chapA", "chapB"])
         assert calls == ["chapA", "chapB"]
-        assert result == [[None, ["v1", "v2"]], [None, ["v1", "v2"]]]
+        assert result == [
+            ChapterResult(
+                soup=None, variations=["v1", "v2"], expected=None, name="chap"
+            ),
+            ChapterResult(
+                soup=None, variations=["v1", "v2"], expected=None, name="chap"
+            ),
+        ]
 
 
 class TestGenerateCoursePGNs:
@@ -107,10 +117,13 @@ class TestProcessChapter:
         monkeypatch.setattr(
             WebFetch,
             "getChapterDetail",
-            lambda courseId, chapter, profileName: (chapterBS, ["var1"]),
+            lambda courseId, chapter, profileName: (chapterBS, ["var1"], None),
         )
         result = processChapter("123", tag_str, "Default")
-        assert result == [chapterBS, ["var1"]]
+        assert result.soup is chapterBS
+        assert result.variations == ["var1"]
+        assert result.name == "Test Chapter"
+        assert result.expected is None
 
 
 class TestLoadVariationInfo:
@@ -138,8 +151,15 @@ class TestLoadVariationInfo:
         monkeypatch.setattr(WebFetch, "getVariationHtml", _fake_get_variation_html)
 
         chapterResults = [
-            [None, [variation_ok, variation_missing]],
-            [None, [variation_ok]],
+            ChapterResult(
+                soup=None,
+                variations=[variation_ok, variation_missing],
+                expected=None,
+                name="chap1",
+            ),
+            ChapterResult(
+                soup=None, variations=[variation_ok], expected=None, name="chap2"
+            ),
         ]
         result = loadVariationInfo("123", chapterResults)
 
@@ -157,7 +177,11 @@ class TestProcessBatch:
         monkeypatch.setattr(
             core,
             "loadChapterInfo",
-            lambda courseId, chapters: [[None, ["var1", "var2"]]],
+            lambda courseId, chapters: [
+                ChapterResult(
+                    soup=None, variations=["var1", "var2"], expected=None, name="chap1"
+                )
+            ],
         )
 
     def test_incremental_mode_writes_one_pgn_per_variation(
@@ -231,7 +255,13 @@ class TestProcessBatch:
 
         processBatch(["123"], [])
 
-        assert fetch_calls == [[[None, ["var1", "var2"]]]]
+        assert fetch_calls == [
+            [
+                ChapterResult(
+                    soup=None, variations=["var1", "var2"], expected=None, name="chap1"
+                )
+            ]
+        ]
 
     def test_one_off_variation_writes_pgn_when_found(
         self, monkeypatch: pytest.MonkeyPatch

@@ -20,6 +20,7 @@ Deux modes d'utilisation :
 
 import enum
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -395,8 +396,14 @@ class WebFetch:
     @beartype
     def getChapterDetail(
         cls, courseId: str, chapterBs: Tag, profileName: str
-    ) -> tuple[BeautifulSoup | None, list[Any]]:
+    ) -> tuple[BeautifulSoup | None, list[Any], int | None]:
         """Récupère la page HTML d'un chapitre et ses variations.
+
+        Si l'oracle ``div.variationStats`` de la page cours indique un nombre
+        de variations attendu supérieur au nombre trouvé, retente le fetch
+        réseau (en forçant le contournement du cache) jusqu'à 3 tentatives au
+        total, y compris quand le HTML provenait du cache — un cache déjà
+        incomplet s'auto-corrige ainsi au prochain run.
 
         Args:
             courseId: Identifiant du cours Chessable.
@@ -404,16 +411,38 @@ class WebFetch:
             profileName: Profil navigateur à utiliser.
 
         Returns:
-            Tuple ``(page chapitre, tags variation)``.
+            Tuple ``(page chapitre, tags variation, nombre de variations
+            attendu)``. Le troisième élément est None si l'oracle est absent ou
+            illisible.
         """
         href = _attr_str(
             _as_tag(chapterBs.find("a", href=True), "lien du chapitre"), "href"
         )
         tags = href.split("/")
         chapterID = tags[len(tags) - 1]
+        expected = WebFetch.getChapterExpectedCount(chapterBs)
+
         bs = WebFetch.getChapterHtml(courseId, chapterID, profileName)
         variations = WebFetch.getChapterVariations(bs)
-        return bs, variations
+
+        attempts = 1
+        while (
+            expected is not None
+            and len(variations) < expected
+            and attempts < 3
+            and WebFetch.doFetch != FetchMode.FETCH_NONE
+        ):
+            print(
+                f"-- chapitre {chapterID} incomplet ({len(variations)}/{expected}"
+                f" variations) — nouvelle tentative {attempts + 1}/3"
+            )
+            bs = WebFetch.getChapterHtml(
+                courseId, chapterID, profileName, forceFetch=True
+            )
+            variations = WebFetch.getChapterVariations(bs)
+            attempts += 1
+
+        return bs, variations, expected
 
     @classmethod
     @beartype
@@ -474,6 +503,31 @@ class WebFetch:
             tag.find("div", class_="toBeClamped title"), "titre du chapitre"
         )
         return title.text
+
+    @classmethod
+    @beartype
+    def getChapterExpectedCount(cls, chapterTag: Tag) -> int | None:
+        """Lit le nombre de variations attendu d'un chapitre (oracle variationStats).
+
+        Chaque tag ``div.chapter`` contient un ``div.variationStats`` dont
+        le texte indique ``"<trouvées>/<attendues> variations"`` (ou au
+        singulier ``"1/1 variation"``). Ce compte sert d'oracle fiable pour
+        détecter une extraction incomplète.
+
+        Args:
+            chapterTag: Tag ``div.chapter``.
+
+        Returns:
+            Le nombre de variations attendu, ou None si le marqueur est absent
+            ou son contenu illisible. Ne lève jamais d'exception.
+        """
+        stats = chapterTag.find("div", class_="variationStats")
+        if not isinstance(stats, Tag):
+            return None
+        match = re.search(r"(\d+)\s*/\s*(\d+)", stats.text)
+        if match is None:
+            return None
+        return int(match.group(2))
 
     @classmethod
     @beartype
@@ -578,7 +632,7 @@ class WebFetch:
     @classmethod
     @beartype
     def getChapterHtml(
-        cls, courseId: str, chapterId: str, profileName: str
+        cls, courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
     ) -> BeautifulSoup | None:
         """Récupère (cache ou réseau) la page HTML d'un chapitre.
 
@@ -586,11 +640,14 @@ class WebFetch:
             courseId: Identifiant du cours parent.
             chapterId: Identifiant du chapitre.
             profileName: Profil navigateur à utiliser.
+            forceFetch: Si True, force un fetch réseau même si un cache existe.
 
         Returns:
             Page HTML du chapitre, ou None en cas d'échec.
         """
-        return WebFetch.getHtml("course", courseId + "/" + chapterId, profileName)
+        return WebFetch.getHtml(
+            "course", courseId + "/" + chapterId, profileName, forceFetch=forceFetch
+        )
 
     @classmethod
     @beartype
@@ -615,6 +672,7 @@ class WebFetch:
         profileName: str,
         fileroot: str = "",
         isVar: bool = False,
+        forceFetch: bool = False,
     ) -> BeautifulSoup | None:
         """Récupère du HTML Chessable, depuis le cache local ou le réseau.
 
@@ -628,6 +686,9 @@ class WebFetch:
             profileName: Profil navigateur à utiliser.
             fileroot: Préfixe de chemin pour le cache (ex: ``"course/<id>"``).
             isVar: Si True, l'élément est une variation (navigation spécifique).
+            forceFetch: Si True, force un fetch réseau même en mode
+                ``FETCH_NEW``/``FETCH_NONE`` — piloté par l'appelant plutôt
+                que par le mode global.
 
         Returns:
             HTML parsé en ``BeautifulSoup``, ou None en cas d'échec ou de
@@ -640,7 +701,7 @@ class WebFetch:
         if fileroot != "":
             location = fileroot + "/" + location
 
-        if WebFetch.doFetch == FetchMode.FETCH_ALL:
+        if forceFetch or WebFetch.doFetch == FetchMode.FETCH_ALL:
             # session invalide -> ChessableAuthError levée par loadHtmlFromWeb,
             # aucun contenu de page publique ne peut donc atteindre ce point
             pageHtml = WebFetch._fetchHtml(url, profileName, isVar)
