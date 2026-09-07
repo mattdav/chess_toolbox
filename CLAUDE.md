@@ -199,6 +199,16 @@ en `CHESSABLE_DEBUG_PORT=0` avec CfT.
 Mocker les appels HTTP (`requests`, Selenium) pour tester `generateCoursePGNs`
 et la génération PGN sans accès réseau ni navigateur.
 
+### Oracle de comptage et stabilisation du rendu
+
+Chaque page de cours expose, par chapitre, un compteur `div.variationStats`
+(ex. `"0/14 variations"`) donnant le nombre de variations trouvées vs attendues.
+Un chapitre incomplet déclenche une nouvelle tentative en forçant un accès
+réseau (jusqu'à 3 tentatives), plutôt qu'une mise en cache silencieuse d'une
+page tronquée. L'attente de chargement Selenium attend désormais que le
+nombre d'éléments soit **stable** (pas juste présent) avant mise en cache,
+pour éviter de figer une page partiellement rendue.
+
 ## Règles importantes pour Claude Code
 
 1. **Ne jamais committer `.env` ou `config.cfg` contenant de vraies clés API**

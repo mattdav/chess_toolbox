@@ -86,6 +86,20 @@ Aucune connexion manuelle n'est requise après le premier login.
 - `FIREFOX_AUTOMATION_PROFILE_DIR` — répertoire du profil dédié (défaut : `C:/tools/firefox-automation-profile`)
 - `GECKODRIVER_PATH` — chemin vers GeckoDriver si non géré automatiquement par Selenium Manager
 
+#### Cache
+
+Sous `CHESSABLE_HTML_CACHE` et `CHESSABLE_PGN_CACHE`, l'arborescence est :
+
+```text
+<CHESSABLE_HTML_CACHE>/course/<courseId>.html                      # page du cours
+<CHESSABLE_HTML_CACHE>/course/<courseId>/<chapterId>.html          # page d'un chapitre
+<CHESSABLE_HTML_CACHE>/course/<courseId>/variation/<variationId>.html  # page d'une variation
+<CHESSABLE_PGN_CACHE>/course/<courseId>.pgn                        # PGN complet d'un cours
+<CHESSABLE_PGN_CACHE>/variation/<variationId>.pgn                  # PGN d'une variation isolée
+```
+
+Le flag `-web` contrôle l'accès réseau : `update` (défaut) réutilise le cache existant et ne récupère que ce qui manque — y compris les chapitres restés incomplets lors d'une exécution précédente, retentés automatiquement ; `all` force un re-téléchargement complet ; `none` n'utilise que le cache existant, sans aucun accès réseau.
+
 ## Acknowledgements
 
 - [README generator](https://readme.so/fr)

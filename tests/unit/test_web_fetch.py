@@ -227,6 +227,166 @@ class TestLoadWriteHtmlFile:
         WebFetch.writeHtmlToFile("course/123", None)
         assert WebFetch.loadHtmlFromFile("course/123") == ""
 
+    def test_write_creates_nested_parent_directories(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Un emplacement à plusieurs niveaux crée tous les parents manquants."""
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
+        WebFetch.writeHtmlToFile("course/123/variation/456", "<html>v</html>")
+        assert WebFetch.loadHtmlFromFile("course/123/variation/456") == "<html>v</html>"
+        assert (tmp_path / "course" / "123" / "variation" / "456.html").is_file()
+
+
+class TestGetChapterExpectedCount:
+    """Tests pour `WebFetch.getChapterExpectedCount` (oracle variationStats)."""
+
+    def test_nominal_count(self) -> None:
+        """Le format standard `"trouvées/attendues variations"` est lu correctement."""
+        html = (
+            '<div class="chapter"><div class="variationStats">'
+            "0/14 variations</div></div>"
+        )
+        tag = BeautifulSoup(html, "html.parser").find("div", class_="chapter")
+        assert isinstance(tag, Tag)
+        assert WebFetch.getChapterExpectedCount(tag) == 14
+
+    def test_singular_count(self) -> None:
+        """Le format singulier `"1/1 variation"` est lu correctement."""
+        html = (
+            '<div class="chapter"><div class="variationStats">1/1 variation</div></div>'
+        )
+        tag = BeautifulSoup(html, "html.parser").find("div", class_="chapter")
+        assert isinstance(tag, Tag)
+        assert WebFetch.getChapterExpectedCount(tag) == 1
+
+    def test_missing_stats_returns_none(self) -> None:
+        """L'absence de `div.variationStats` retourne None sans lever d'exception."""
+        html = '<div class="chapter"></div>'
+        tag = BeautifulSoup(html, "html.parser").find("div", class_="chapter")
+        assert isinstance(tag, Tag)
+        assert WebFetch.getChapterExpectedCount(tag) is None
+
+    def test_unparsable_text_returns_none(self) -> None:
+        """Un texte sans motif `chiffres/chiffres` retourne None."""
+        html = (
+            '<div class="chapter"><div class="variationStats">'
+            "plusieurs variations</div></div>"
+        )
+        tag = BeautifulSoup(html, "html.parser").find("div", class_="chapter")
+        assert isinstance(tag, Tag)
+        assert WebFetch.getChapterExpectedCount(tag) is None
+
+
+class TestGetChapterDetailRetry:
+    """Tests pour la boucle de nouvelle tentative de `getChapterDetail`."""
+
+    def _chapter_tag(self, stats_text: str) -> Tag:
+        html = (
+            '<div class="chapter">'
+            '<a href="https://www.chessable.com/course/123/chapter/456">chap</a>'
+            f'<div class="variationStats">{stats_text}</div>'
+            "</div>"
+        )
+        tag = BeautifulSoup(html, "html.parser").find("div", class_="chapter")
+        assert isinstance(tag, Tag)
+        return tag
+
+    def _page_with_variations(self, count: int) -> BeautifulSoup:
+        cards = "".join(
+            f'<div class="variation-card__row--main">v{i}</div>' for i in range(count)
+        )
+        return BeautifulSoup(f"<html><body>{cards}</body></html>", "html.parser")
+
+    def test_retries_until_expected_count_reached(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Un chapitre incomplet est retenté jusqu'à atteindre le compte attendu."""
+        pages = [self._page_with_variations(1), self._page_with_variations(2)]
+        calls: list[bool] = []
+
+        def _fake_get_chapter_html(
+            courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
+        ) -> BeautifulSoup:
+            calls.append(forceFetch)
+            return pages[len(calls) - 1]
+
+        monkeypatch.setattr(WebFetch, "getChapterHtml", _fake_get_chapter_html)
+        WebFetch.doFetch = FetchMode.FETCH_NEW
+
+        bs, variations, expected = WebFetch.getChapterDetail(
+            "123", self._chapter_tag("0/2 variations"), "Default"
+        )
+
+        assert expected == 2
+        assert len(variations) == 2
+        assert calls == [False, True]
+
+    def test_stops_after_three_attempts_when_still_incomplete(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Un chapitre qui reste incomplet s'arrête après 3 tentatives au total."""
+        calls: list[bool] = []
+
+        def _fake_get_chapter_html(
+            courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
+        ) -> BeautifulSoup:
+            calls.append(forceFetch)
+            return self._page_with_variations(1)
+
+        monkeypatch.setattr(WebFetch, "getChapterHtml", _fake_get_chapter_html)
+        WebFetch.doFetch = FetchMode.FETCH_NEW
+
+        bs, variations, expected = WebFetch.getChapterDetail(
+            "123", self._chapter_tag("0/5 variations"), "Default"
+        )
+
+        assert expected == 5
+        assert len(variations) == 1
+        assert calls == [False, True, True]
+
+    def test_no_retry_when_expected_count_unknown(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sans oracle lisible, aucune nouvelle tentative n'est déclenchée."""
+        calls: list[bool] = []
+
+        def _fake_get_chapter_html(
+            courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
+        ) -> BeautifulSoup:
+            calls.append(forceFetch)
+            return self._page_with_variations(1)
+
+        monkeypatch.setattr(WebFetch, "getChapterHtml", _fake_get_chapter_html)
+        WebFetch.doFetch = FetchMode.FETCH_NEW
+
+        bs, variations, expected = WebFetch.getChapterDetail(
+            "123", self._chapter_tag("texte illisible"), "Default"
+        )
+
+        assert expected is None
+        assert calls == [False]
+
+    def test_no_retry_in_fetch_none_mode(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """En mode FETCH_NONE, un chapitre incomplet n'est jamais retenté."""
+        calls: list[bool] = []
+
+        def _fake_get_chapter_html(
+            courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
+        ) -> BeautifulSoup:
+            calls.append(forceFetch)
+            return self._page_with_variations(1)
+
+        monkeypatch.setattr(WebFetch, "getChapterHtml", _fake_get_chapter_html)
+        WebFetch.doFetch = FetchMode.FETCH_NONE
+
+        bs, variations, expected = WebFetch.getChapterDetail(
+            "123", self._chapter_tag("0/5 variations"), "Default"
+        )
+
+        assert expected == 5
+        assert len(variations) == 1
+        assert calls == [False]
+
 
 class TestGetHtml:
     """Tests pour `getHtml`, avec `_fetchHtml` remplacé par un double."""
