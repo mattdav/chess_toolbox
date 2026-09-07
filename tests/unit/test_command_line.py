@@ -1,6 +1,7 @@
 """Tests pour `chessable_to_pgn.command_line`."""
 
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -141,8 +142,8 @@ class TestProcessCommandLineParams:
             "/profile",
         )
         processCommandLineParams()
-        assert settings.chessable_pgn_cache == "/pgn"
-        assert settings.chessable_html_cache == "/html"
+        assert settings.chessable_pgn_cache == Path("/pgn")
+        assert settings.chessable_html_cache == Path("/html")
         assert settings.firefox_binary_path == "/bin/firefox"
         assert settings.firefox_automation_profile_dir == "/profile"
 

@@ -10,6 +10,7 @@ chess@demastri.com.
 
 import argparse
 import sys
+from pathlib import Path
 
 from beartype import beartype
 
@@ -147,11 +148,11 @@ def processCommandLineParams() -> tuple[str | None, list[str] | None, list[str] 
 
     if args.pgnroot is not None:
         print("- Setting pgn root location to <" + args.pgnroot + ">")
-        settings.chessable_pgn_cache = args.pgnroot
+        settings.chessable_pgn_cache = Path(args.pgnroot)
 
     if args.htmlroot is not None:
         print("- Setting html root location to <" + args.htmlroot + ">")
-        settings.chessable_html_cache = args.htmlroot
+        settings.chessable_html_cache = Path(args.htmlroot)
 
     if args.browserbinary is not None:
         print("- Setting browser binary location to <" + args.browserbinary + ">")

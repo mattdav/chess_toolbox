@@ -10,7 +10,6 @@ chess@demastri.com.
 
 import enum
 import re
-from pathlib import Path
 from typing import Any, ClassVar
 
 from beartype import beartype
@@ -462,11 +461,10 @@ class Pgn:
         Returns:
             Nombre de caractères écrits.
         """
-        course_path = settings.chessable_pgn_cache + "course/"
+        course_path = settings.chessable_pgn_cache / "course"
         mode = "a" if incremental else "w"
-        path = Path(course_path)
-        path.mkdir(parents=True, exist_ok=True)
-        with open(course_path + courseId + ".pgn", mode, encoding="utf-8") as file:
+        course_path.mkdir(parents=True, exist_ok=True)
+        with open(course_path / f"{courseId}.pgn", mode, encoding="utf-8") as file:
             return file.write(pgnOut)
 
     @classmethod
@@ -481,10 +479,9 @@ class Pgn:
         Returns:
             Nombre de caractères écrits.
         """
-        variation_path = settings.chessable_pgn_cache + "variation/"
-        path = Path(variation_path)
-        path.mkdir(parents=True, exist_ok=True)
-        with open(variation_path + variationId + ".pgn", "w", encoding="utf-8") as file:
+        variation_path = settings.chessable_pgn_cache / "variation"
+        variation_path.mkdir(parents=True, exist_ok=True)
+        with open(variation_path / f"{variationId}.pgn", "w", encoding="utf-8") as file:
             return file.write(pgnOut)
 
     @classmethod

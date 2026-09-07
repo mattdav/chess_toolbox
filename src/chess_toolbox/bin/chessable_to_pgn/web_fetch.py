@@ -20,7 +20,6 @@ Deux modes d'utilisation :
 
 import enum
 import os
-import os.path
 import subprocess
 import time
 from pathlib import Path
@@ -693,11 +692,10 @@ class WebFetch:
         Returns:
             Contenu du fichier, ou chaîne vide si absent du cache.
         """
-        path = settings.chessable_html_cache + location + ".html"
-        if not os.path.exists(path):
+        path = settings.chessable_html_cache / f"{location}.html"
+        if not path.exists():
             return ""
-        with open(path, encoding="utf-8") as f:
-            return f.read()
+        return path.read_text(encoding="utf-8")
 
     @classmethod
     @beartype
@@ -708,15 +706,12 @@ class WebFetch:
             location: Chemin relatif (sans extension) sous le cache HTML.
             content: Contenu à écrire, ou None si rien n'a été récupéré.
         """
-        path = Path(settings.chessable_html_cache + location[: location.rfind("/")])
-        path.mkdir(parents=True, exist_ok=True)
-        with open(
-            settings.chessable_html_cache + location + ".html", "w", encoding="utf-8"
-        ) as f:
-            if content is None:
-                print("-- returned no content from web")
-            else:
-                f.write(content)
+        path = settings.chessable_html_cache / f"{location}.html"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if content is None:
+            print("-- returned no content from web")
+        else:
+            path.write_text(content, encoding="utf-8")
 
     @classmethod
     def _build_browser(

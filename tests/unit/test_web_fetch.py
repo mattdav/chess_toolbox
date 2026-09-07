@@ -208,14 +208,14 @@ class TestLoadWriteHtmlFile:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Un chemin absent du cache retourne une chaîne vide."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         assert WebFetch.loadHtmlFromFile("course/123") == ""
 
     def test_write_then_load_roundtrip(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Le contenu écrit est relu identique."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         WebFetch.writeHtmlToFile("course/123", "<html>hi</html>")
         assert WebFetch.loadHtmlFromFile("course/123") == "<html>hi</html>"
 
@@ -223,7 +223,7 @@ class TestLoadWriteHtmlFile:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Un contenu `None` produit un fichier vide (pas d'exception)."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         WebFetch.writeHtmlToFile("course/123", None)
         assert WebFetch.loadHtmlFromFile("course/123") == ""
 
@@ -235,7 +235,7 @@ class TestGetHtml:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode `FETCH_ALL`, le réseau est interrogé même si un cache existe."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         WebFetch.writeHtmlToFile("course/123", "<html>stale cache</html>")
         monkeypatch.setattr(
             WebFetch, "_fetchHtml", lambda url, profile, isVar: "<html>fresh</html>"
@@ -252,7 +252,7 @@ class TestGetHtml:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode `FETCH_NEW`, un cache déjà présent est utilisé sans appel réseau."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         WebFetch.writeHtmlToFile("course/123", "<html>cached</html>")
 
         def _fail(*_args: Any, **_kwargs: Any) -> str:
@@ -272,7 +272,7 @@ class TestGetHtml:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode `FETCH_NEW`, l'absence de cache déclenche un fetch réseau."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         monkeypatch.setattr(
             WebFetch, "_fetchHtml", lambda url, profile, isVar: "<html>from web</html>"
         )
@@ -288,7 +288,7 @@ class TestGetHtml:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode `FETCH_NONE`, l'absence de cache retourne None sans appel réseau."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
 
         def _fail(*_args: Any, **_kwargs: Any) -> str:
             raise AssertionError(
@@ -304,7 +304,7 @@ class TestGetHtml:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Un cache contenant la page publique (session expirée) est refetché."""
-        monkeypatch.setattr(settings, "chessable_html_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         public_html = (FIXTURES_DIR / "chessable_public_page.html").read_text(
             encoding="utf-8"
         )
