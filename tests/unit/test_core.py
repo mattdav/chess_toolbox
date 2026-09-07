@@ -208,6 +208,22 @@ class TestProcessBatch:
 
         assert writes == [False, True]
 
+    def test_incremental_mode_records_failure_when_variation_html_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Un PGN vide (HTML non chargé) est un échec, pas une extraction réussie."""
+        self._patch_course_and_chapter(monkeypatch)
+        Pgn.doPgn = PgnMode.PGN_INCREMENTAL
+        monkeypatch.setattr(
+            WebFetch,
+            "getVariationDetailFromTag",
+            lambda courseId, variationBs, profileName: [None, "123"],
+        )
+        monkeypatch.setattr(core, "generateCoursePGNs", lambda courseId, results: "")
+        monkeypatch.setattr(Pgn, "writeCoursePgnFile", _fail)
+
+        processBatch(["123"], [])
+
     def test_after_mode_writes_a_single_aggregated_pgn(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

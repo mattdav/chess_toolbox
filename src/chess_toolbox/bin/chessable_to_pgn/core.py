@@ -136,9 +136,17 @@ def processBatch(courses: list[str], variations: list[str]) -> None:
                         )
                         thisVarDet.append(variationLabel)
                         pgnOut = generateCoursePGNs(courseId, [thisVarDet])
-                        Pgn.writeCoursePgnFile(courseId, pgnOut, appendToFile)
-                        appendToFile = True
-                        variationsExtracted += 1
+                        if pgnOut:
+                            Pgn.writeCoursePgnFile(courseId, pgnOut, appendToFile)
+                            appendToFile = True
+                            variationsExtracted += 1
+                        else:
+                            failedVariations.append(
+                                (
+                                    variationLabel,
+                                    "PGN vide (HTML variation non chargé)",
+                                )
+                            )
                     except ChessableAuthError:
                         raise
                     except Exception as e:
