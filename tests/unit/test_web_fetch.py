@@ -238,7 +238,9 @@ class TestGetHtml:
         monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         WebFetch.writeHtmlToFile("course/123", "<html>stale cache</html>")
         monkeypatch.setattr(
-            WebFetch, "_fetchHtml", lambda url, profile, isVar: "<html>fresh</html>"
+            WebFetch,
+            "_fetchHtml",
+            lambda url, profile, isVar, pageKind: "<html>fresh</html>",
         )
         WebFetch.doFetch = FetchMode.FETCH_ALL
 
@@ -274,7 +276,9 @@ class TestGetHtml:
         """En mode `FETCH_NEW`, l'absence de cache déclenche un fetch réseau."""
         monkeypatch.setattr(settings, "chessable_html_cache", tmp_path)
         monkeypatch.setattr(
-            WebFetch, "_fetchHtml", lambda url, profile, isVar: "<html>from web</html>"
+            WebFetch,
+            "_fetchHtml",
+            lambda url, profile, isVar, pageKind: "<html>from web</html>",
         )
         WebFetch.doFetch = FetchMode.FETCH_NEW
 
@@ -312,7 +316,7 @@ class TestGetHtml:
         monkeypatch.setattr(
             WebFetch,
             "_fetchHtml",
-            lambda url, profile, isVar: "<html>real content</html>",
+            lambda url, profile, isVar, pageKind: "<html>real content</html>",
         )
         WebFetch.doFetch = FetchMode.FETCH_NEW
 
