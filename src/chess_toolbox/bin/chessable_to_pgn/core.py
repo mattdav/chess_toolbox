@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from . import command_line
 from .pgn_writer import Pgn, PgnMode
-from .web_fetch import WebFetch
+from .web_fetch import ChessableAuthError, WebFetch
 
 profileIds: list[str] = []
 
@@ -108,6 +108,20 @@ def processBatch(courses: list[str], variations: list[str]) -> None:
         print("----------")
 
         chapterResults = loadChapterInfo(courseId, chapters)
+
+        incompleteChapters: list[tuple[str, int, int]] = []
+        for chapterResult in chapterResults:
+            if chapterResult.expected is None:
+                continue
+            found = len(chapterResult.variations)
+            if found < chapterResult.expected:
+                incompleteChapters.append(
+                    (chapterResult.name, found, chapterResult.expected)
+                )
+
+        failedVariations: list[tuple[str, str]] = []
+        variationsExtracted = 0
+
         # once we have the chapter details, we can load all of the variation htmls
         if Pgn.doPgn == PgnMode.PGN_INCREMENTAL:
             appendToFile = False
@@ -115,21 +129,51 @@ def processBatch(courses: list[str], variations: list[str]) -> None:
                 vset = chapterResults[i].variations
                 # get each variation individually
                 for vi in range(len(vset)):
-                    thisVarDet = WebFetch.getVariationDetailFromTag(
-                        courseId, vset[vi], "Default"
-                    )
-                    thisVarDet.append(str(i + 1) + "." + str(vi + 1))
-                    pgnOut = generateCoursePGNs(courseId, [thisVarDet])
-                    Pgn.writeCoursePgnFile(courseId, pgnOut, appendToFile)
-                    appendToFile = True
+                    variationLabel = str(i + 1) + "." + str(vi + 1)
+                    try:
+                        thisVarDet = WebFetch.getVariationDetailFromTag(
+                            courseId, vset[vi], "Default"
+                        )
+                        thisVarDet.append(variationLabel)
+                        pgnOut = generateCoursePGNs(courseId, [thisVarDet])
+                        Pgn.writeCoursePgnFile(courseId, pgnOut, appendToFile)
+                        appendToFile = True
+                        variationsExtracted += 1
+                    except ChessableAuthError:
+                        raise
+                    except Exception as e:
+                        failedVariations.append((variationLabel, str(e)))
         elif Pgn.doPgn == PgnMode.PGN_AFTER:
             variationResults = loadVariationInfo(courseId, chapterResults)
+            variationsExtracted = len(variationResults)
             # now all of the variation htmls are available locally
             pgnOut = generateCoursePGNs(courseId, variationResults)
             Pgn.writeCoursePgnFile(courseId, pgnOut, False)
         else:
             # still get the html even if we're not doing pgn...
-            loadVariationInfo(courseId, chapterResults)
+            variationResults = loadVariationInfo(courseId, chapterResults)
+            variationsExtracted = len(variationResults)
+
+        totalExpected = 0
+        for chapterResult in chapterResults:
+            totalExpected += (
+                chapterResult.expected
+                if chapterResult.expected is not None
+                else len(chapterResult.variations)
+            )
+
+        print(
+            f"--- Cours {courseId} : {variationsExtracted}/{totalExpected}"
+            " variations extraites"
+        )
+        if incompleteChapters:
+            print("  - chapitres incomplets :")
+            for name, found, expected in incompleteChapters:
+                print(f'      - "{name}" : {found}/{expected} variations')
+        if failedVariations:
+            print("  - variations en échec :")
+            for label, reason in failedVariations:
+                print(f"      - {label} : {reason}")
 
         print("----------")
 
