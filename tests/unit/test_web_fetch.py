@@ -92,6 +92,22 @@ class TestAssertNotRedirected:
         with pytest.raises(ChessableAuthError):
             _assert_not_redirected(browser, "https://www.chessable.com/profile/")  # type: ignore[arg-type]
 
+    def test_ignores_routing_fragment(self) -> None:
+        """Un fragment de routage ajouté par le lecteur n'est pas une redirection."""
+        browser = _FakeBrowser("https://www.chessable.com/variation/123/#/1/b")
+        _assert_not_redirected(browser, "https://www.chessable.com/variation/123")  # type: ignore[arg-type]
+
+    def test_ignores_added_query_string(self) -> None:
+        """Une query string ajoutée n'est pas une redirection."""
+        browser = _FakeBrowser("https://www.chessable.com/variation/123?x=1")
+        _assert_not_redirected(browser, "https://www.chessable.com/variation/123")  # type: ignore[arg-type]
+
+    def test_raises_on_different_host(self) -> None:
+        """Une redirection vers un autre hôte lève `ChessableAuthError`."""
+        browser = _FakeBrowser("https://evil.example.com/variation/123")
+        with pytest.raises(ChessableAuthError):
+            _assert_not_redirected(browser, "https://www.chessable.com/variation/123")  # type: ignore[arg-type]
+
 
 class TestAsTag:
     """Tests pour `_as_tag`."""

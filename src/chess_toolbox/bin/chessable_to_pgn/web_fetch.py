@@ -25,6 +25,7 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Any, ClassVar, Literal
+from urllib.parse import urlsplit
 
 from beartype import beartype
 from bs4 import BeautifulSoup, NavigableString, Tag
@@ -175,15 +176,26 @@ def _assert_not_redirected(browser: webdriver.Firefox, expected_url: str) -> Non
     Signal primaire de détection d'une session expirée (voir
     SPEC-session-chessable) : indépendant de la langue ou du contenu textuel
     de la page, contrairement à une détection par titre ou par marqueur HTML.
+    Seuls le schéma, l'hôte et le chemin sont comparés (slash final ignoré) :
+    une fois la page montée, le lecteur Chessable installe un fragment de
+    routage (ex. ``#/1/b``) et peut ajouter une query string, ni l'un ni
+    l'autre ne relevant d'une redirection de session.
 
     Args:
         browser: Instance Selenium juste après un ``browser.get(expected_url)``.
         expected_url: URL demandée.
 
     Raises:
-        ChessableAuthError: Si l'URL obtenue diffère de celle demandée.
+        ChessableAuthError: Si le schéma, l'hôte ou le chemin obtenu diffère
+            de celui demandé.
     """
-    if browser.current_url.rstrip("/") != expected_url.rstrip("/"):
+    current = urlsplit(browser.current_url)
+    expected = urlsplit(expected_url)
+    if (current.scheme, current.netloc, current.path.rstrip("/")) != (
+        expected.scheme,
+        expected.netloc,
+        expected.path.rstrip("/"),
+    ):
         raise ChessableAuthError(
             f"Session Chessable invalide ou expirée : <{expected_url}> a été "
             f"redirigé vers <{browser.current_url}>. Relancez "
