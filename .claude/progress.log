@@ -676,3 +676,70 @@ plan de modernisation) : comparaison d'URL comme signal primaire,
   - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
 
 ---
+
+## Session du 2026-09-07 21:06 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/command_line.py
+  - src/chess_toolbox/bin/chessable_to_pgn/pgn_writer.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - src/chess_toolbox/config/settings.py
+  - tests/unit/test_command_line.py
+  - tests/unit/test_pgn_writer.py
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-09-07 21:23 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - tests/unit/test_core.py
+
+---
+
+## Session du 2026-09-07 21:35 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-09-07 21:46 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+
+---
+
+## Session du 2026-09-07 21:47 — chess_toolbox
+
+**Fichiers modifiés :**
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-09-07 21:50 — chess_toolbox
+
+**Fichiers modifiés :**
+  - tests/unit/test_web_fetch.py
+
+---
+
+## Session du 2026-09-07 21:54 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/core.py
+  - tests/unit/test_core.py
+
+---
+
+## Session du 2026-09-08 08:00 — chess_toolbox
+
+**Fichiers modifiés :**
+  - src/chess_toolbox/bin/chessable_to_pgn/web_fetch.py
+  - tests/unit/test_web_fetch.py
+
+---

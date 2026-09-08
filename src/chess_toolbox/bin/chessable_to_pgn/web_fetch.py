@@ -20,11 +20,12 @@ Deux modes d'utilisation :
 
 import enum
 import os
-import os.path
+import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
+from urllib.parse import urlsplit
 
 from beartype import beartype
 from bs4 import BeautifulSoup, NavigableString, Tag
@@ -175,15 +176,26 @@ def _assert_not_redirected(browser: webdriver.Firefox, expected_url: str) -> Non
     Signal primaire de détection d'une session expirée (voir
     SPEC-session-chessable) : indépendant de la langue ou du contenu textuel
     de la page, contrairement à une détection par titre ou par marqueur HTML.
+    Seuls le schéma, l'hôte et le chemin sont comparés (slash final ignoré) :
+    une fois la page montée, le lecteur Chessable installe un fragment de
+    routage (ex. ``#/1/b``) et peut ajouter une query string, ni l'un ni
+    l'autre ne relevant d'une redirection de session.
 
     Args:
         browser: Instance Selenium juste après un ``browser.get(expected_url)``.
         expected_url: URL demandée.
 
     Raises:
-        ChessableAuthError: Si l'URL obtenue diffère de celle demandée.
+        ChessableAuthError: Si le schéma, l'hôte ou le chemin obtenu diffère
+            de celui demandé.
     """
-    if browser.current_url.rstrip("/") != expected_url.rstrip("/"):
+    current = urlsplit(browser.current_url)
+    expected = urlsplit(expected_url)
+    if (current.scheme, current.netloc, current.path.rstrip("/")) != (
+        expected.scheme,
+        expected.netloc,
+        expected.path.rstrip("/"),
+    ):
         raise ChessableAuthError(
             f"Session Chessable invalide ou expirée : <{expected_url}> a été "
             f"redirigé vers <{browser.current_url}>. Relancez "
@@ -351,6 +363,23 @@ class FetchMode(enum.Enum):
     FETCH_NONE = 2
 
 
+#: Type de page Chessable ciblé par un fetch — détermine le sélecteur CSS
+#: utilisé pour juger le contenu "chargé" dans `loadHtmlFromWeb`.
+PageKind = Literal["course", "chapter", "variation"]
+
+# Sélecteur CSS dont on stabilise le nombre de correspondances par type de
+# page, et sélecteur additionnel devant aussi être présent (None si aucun).
+# Remplace l'ancien sélecteur générique par OR
+# ("div.chapter, div.variation-card__row--main, div#controls"), qui était
+# satisfait par le premier élément apparu alors que la liste continuait de
+# se peupler.
+_PAGE_KIND_SELECTORS: dict[PageKind, tuple[str, str | None]] = {
+    "course": ("div.chapter", None),
+    "chapter": ("div.variation-card__row--main", None),
+    "variation": ("#theOpeningMoves", "#inputFEN"),
+}
+
+
 class WebFetch:
     """Point d'accès HTML pour les pages Chessable (cours, chapitres, variations).
 
@@ -396,8 +425,14 @@ class WebFetch:
     @beartype
     def getChapterDetail(
         cls, courseId: str, chapterBs: Tag, profileName: str
-    ) -> tuple[BeautifulSoup | None, list[Any]]:
+    ) -> tuple[BeautifulSoup | None, list[Any], int | None]:
         """Récupère la page HTML d'un chapitre et ses variations.
+
+        Si l'oracle ``div.variationStats`` de la page cours indique un nombre
+        de variations attendu supérieur au nombre trouvé, retente le fetch
+        réseau (en forçant le contournement du cache) jusqu'à 3 tentatives au
+        total, y compris quand le HTML provenait du cache — un cache déjà
+        incomplet s'auto-corrige ainsi au prochain run.
 
         Args:
             courseId: Identifiant du cours Chessable.
@@ -405,16 +440,38 @@ class WebFetch:
             profileName: Profil navigateur à utiliser.
 
         Returns:
-            Tuple ``(page chapitre, tags variation)``.
+            Tuple ``(page chapitre, tags variation, nombre de variations
+            attendu)``. Le troisième élément est None si l'oracle est absent ou
+            illisible.
         """
         href = _attr_str(
             _as_tag(chapterBs.find("a", href=True), "lien du chapitre"), "href"
         )
         tags = href.split("/")
         chapterID = tags[len(tags) - 1]
+        expected = WebFetch.getChapterExpectedCount(chapterBs)
+
         bs = WebFetch.getChapterHtml(courseId, chapterID, profileName)
         variations = WebFetch.getChapterVariations(bs)
-        return bs, variations
+
+        attempts = 1
+        while (
+            expected is not None
+            and len(variations) < expected
+            and attempts < 3
+            and WebFetch.doFetch != FetchMode.FETCH_NONE
+        ):
+            print(
+                f"-- chapitre {chapterID} incomplet ({len(variations)}/{expected}"
+                f" variations) — nouvelle tentative {attempts + 1}/3"
+            )
+            bs = WebFetch.getChapterHtml(
+                courseId, chapterID, profileName, forceFetch=True
+            )
+            variations = WebFetch.getChapterVariations(bs)
+            attempts += 1
+
+        return bs, variations, expected
 
     @classmethod
     @beartype
@@ -478,6 +535,31 @@ class WebFetch:
 
     @classmethod
     @beartype
+    def getChapterExpectedCount(cls, chapterTag: Tag) -> int | None:
+        """Lit le nombre de variations attendu d'un chapitre (oracle variationStats).
+
+        Chaque tag ``div.chapter`` contient un ``div.variationStats`` dont
+        le texte indique ``"<trouvées>/<attendues> variations"`` (ou au
+        singulier ``"1/1 variation"``). Ce compte sert d'oracle fiable pour
+        détecter une extraction incomplète.
+
+        Args:
+            chapterTag: Tag ``div.chapter``.
+
+        Returns:
+            Le nombre de variations attendu, ou None si le marqueur est absent
+            ou son contenu illisible. Ne lève jamais d'exception.
+        """
+        stats = chapterTag.find("div", class_="variationStats")
+        if not isinstance(stats, Tag):
+            return None
+        match = re.search(r"(\d+)\s*/\s*(\d+)", stats.text)
+        if match is None:
+            return None
+        return int(match.group(2))
+
+    @classmethod
+    @beartype
     def getVariationDetailFromTag(
         cls, courseId: str, variationBs: Tag, profileName: str
     ) -> list[Any]:
@@ -534,7 +616,12 @@ class WebFetch:
             Page HTML de la variation, ou None en cas d'échec.
         """
         return WebFetch.getHtml(
-            "variation", variationId, profileName, "course/" + str(courseId), True
+            "variation",
+            variationId,
+            profileName,
+            "course/" + str(courseId),
+            True,
+            pageKind="variation",
         )
 
     @classmethod
@@ -579,7 +666,7 @@ class WebFetch:
     @classmethod
     @beartype
     def getChapterHtml(
-        cls, courseId: str, chapterId: str, profileName: str
+        cls, courseId: str, chapterId: str, profileName: str, forceFetch: bool = False
     ) -> BeautifulSoup | None:
         """Récupère (cache ou réseau) la page HTML d'un chapitre.
 
@@ -587,11 +674,18 @@ class WebFetch:
             courseId: Identifiant du cours parent.
             chapterId: Identifiant du chapitre.
             profileName: Profil navigateur à utiliser.
+            forceFetch: Si True, force un fetch réseau même si un cache existe.
 
         Returns:
             Page HTML du chapitre, ou None en cas d'échec.
         """
-        return WebFetch.getHtml("course", courseId + "/" + chapterId, profileName)
+        return WebFetch.getHtml(
+            "course",
+            courseId + "/" + chapterId,
+            profileName,
+            forceFetch=forceFetch,
+            pageKind="chapter",
+        )
 
     @classmethod
     @beartype
@@ -605,7 +699,7 @@ class WebFetch:
         Returns:
             Page HTML du cours, ou None en cas d'échec.
         """
-        return WebFetch.getHtml("course", courseId, profileName)
+        return WebFetch.getHtml("course", courseId, profileName, pageKind="course")
 
     @classmethod
     @beartype
@@ -616,6 +710,8 @@ class WebFetch:
         profileName: str,
         fileroot: str = "",
         isVar: bool = False,
+        forceFetch: bool = False,
+        pageKind: PageKind = "course",
     ) -> BeautifulSoup | None:
         """Récupère du HTML Chessable, depuis le cache local ou le réseau.
 
@@ -629,6 +725,12 @@ class WebFetch:
             profileName: Profil navigateur à utiliser.
             fileroot: Préfixe de chemin pour le cache (ex: ``"course/<id>"``).
             isVar: Si True, l'élément est une variation (navigation spécifique).
+            forceFetch: Si True, force un fetch réseau même en mode
+                ``FETCH_NEW``/``FETCH_NONE`` — piloté par l'appelant plutôt
+                que par le mode global.
+            pageKind: Type de page ciblé (``"course"``, ``"chapter"``,
+                ``"variation"``), détermine le sélecteur de stabilisation
+                utilisé lors du fetch réseau.
 
         Returns:
             HTML parsé en ``BeautifulSoup``, ou None en cas d'échec ou de
@@ -641,11 +743,12 @@ class WebFetch:
         if fileroot != "":
             location = fileroot + "/" + location
 
-        if WebFetch.doFetch == FetchMode.FETCH_ALL:
+        if forceFetch or WebFetch.doFetch == FetchMode.FETCH_ALL:
             # session invalide -> ChessableAuthError levée par loadHtmlFromWeb,
             # aucun contenu de page publique ne peut donc atteindre ce point
-            pageHtml = WebFetch._fetchHtml(url, profileName, isVar)
-            WebFetch.writeHtmlToFile(location, pageHtml)
+            pageHtml = WebFetch._fetchHtml(url, profileName, isVar, pageKind)
+            if pageHtml is not None:
+                WebFetch.writeHtmlToFile(location, pageHtml)
         else:
             pageHtml = WebFetch.loadHtmlFromFile(location)
             if _is_public_page(pageHtml):
@@ -660,13 +763,16 @@ class WebFetch:
             if not pageHtml:
                 if WebFetch.doFetch == FetchMode.FETCH_NONE:
                     return None
-                pageHtml = WebFetch._fetchHtml(url, profileName, isVar)
-                WebFetch.writeHtmlToFile(location, pageHtml)
+                pageHtml = WebFetch._fetchHtml(url, profileName, isVar, pageKind)
+                if pageHtml is not None:
+                    WebFetch.writeHtmlToFile(location, pageHtml)
 
         return None if pageHtml is None else BeautifulSoup(pageHtml, "html.parser")
 
     @classmethod
-    def _fetchHtml(cls, url: str, profileName: str, isVar: bool) -> str | None:
+    def _fetchHtml(
+        cls, url: str, profileName: str, isVar: bool, pageKind: PageKind = "course"
+    ) -> str | None:
         """Charge une page Chessable via Firefox Selenium.
 
         Utilise le profil persistant (FIREFOX_AUTOMATION_PROFILE_DIR) qui
@@ -676,11 +782,12 @@ class WebFetch:
             url: URL à charger.
             profileName: Ignoré pour Firefox, conservé pour compatibilité.
             isVar: Si True, clique sur le bouton de navigation variation.
+            pageKind: Type de page ciblé, transmis à ``loadHtmlFromWeb``.
 
         Returns:
             HTML de la page, ou None en cas d'échec.
         """
-        return WebFetch.loadHtmlFromWeb(url, profileName, isVar)
+        return WebFetch.loadHtmlFromWeb(url, profileName, isVar, pageKind)
 
     @classmethod
     @beartype
@@ -693,11 +800,10 @@ class WebFetch:
         Returns:
             Contenu du fichier, ou chaîne vide si absent du cache.
         """
-        path = settings.chessable_html_cache + location + ".html"
-        if not os.path.exists(path):
+        path = settings.chessable_html_cache / f"{location}.html"
+        if not path.exists():
             return ""
-        with open(path, encoding="utf-8") as f:
-            return f.read()
+        return path.read_text(encoding="utf-8")
 
     @classmethod
     @beartype
@@ -708,15 +814,12 @@ class WebFetch:
             location: Chemin relatif (sans extension) sous le cache HTML.
             content: Contenu à écrire, ou None si rien n'a été récupéré.
         """
-        path = Path(settings.chessable_html_cache + location[: location.rfind("/")])
-        path.mkdir(parents=True, exist_ok=True)
-        with open(
-            settings.chessable_html_cache + location + ".html", "w", encoding="utf-8"
-        ) as f:
-            if content is None:
-                print("-- returned no content from web")
-            else:
-                f.write(content)
+        path = settings.chessable_html_cache / f"{location}.html"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if content is None:
+            print("-- returned no content from web")
+        else:
+            path.write_text(content, encoding="utf-8")
 
     @classmethod
     def _build_browser(
@@ -767,20 +870,84 @@ class WebFetch:
         return browser
 
     @classmethod
+    def _wait_for_content(
+        cls,
+        browser: webdriver.Firefox,
+        css_selector: str,
+        extra_selector: str | None,
+    ) -> bool:
+        """Attend que le contenu ciblé par ``css_selector`` se stabilise.
+
+        Interroge le nombre d'éléments correspondants toutes les ~300ms.
+        Contrairement à ``EC.presence_of_element_located`` (satisfait dès le
+        premier élément apparu), cette attente ne conclut au chargement
+        complet qu'une fois le compte non nul et stable pendant 1.5s
+        d'affilée, plafonné à 20s au total.
+
+        Args:
+            browser: Instance Selenium sur laquelle interroger le DOM.
+            css_selector: Sélecteur dont on stabilise le nombre de
+                correspondances.
+            extra_selector: Sélecteur additionnel qui doit aussi avoir au
+                moins une correspondance, ou None si aucune vérification
+                supplémentaire n'est nécessaire.
+
+        Returns:
+            True si un contenu stable et non vide a été observé avant le
+            délai de 20s (ou si au moins un élément était présent au moment
+            du délai sans y être resté stable), False si aucun élément n'a
+            jamais été trouvé.
+        """
+        timeout = 20.0
+        poll_interval = 0.3
+        stable_duration = 1.5
+        deadline = time.monotonic() + timeout
+        last_count = -1
+        stable_since: float | None = None
+
+        while time.monotonic() < deadline:
+            count = len(browser.find_elements(By.CSS_SELECTOR, css_selector))
+            if count > 0 and extra_selector is not None:
+                if not browser.find_elements(By.CSS_SELECTOR, extra_selector):
+                    count = 0
+            now = time.monotonic()
+            if count != last_count:
+                last_count = count
+                stable_since = now
+            elif (
+                count > 0
+                and stable_since is not None
+                and now - stable_since >= stable_duration
+            ):
+                return True
+            time.sleep(poll_interval)
+
+        return last_count > 0
+
+    @classmethod
     @beartype
     def loadHtmlFromWeb(
-        cls, url: str, profileName: str, isVar: bool = False
+        cls,
+        url: str,
+        profileName: str,
+        isVar: bool = False,
+        pageKind: PageKind = "course",
     ) -> str | None:
         """Charge une page Chessable et retourne son HTML.
 
         Réutilise le navigateur partagé ouvert par ``ChessableFetcher`` pour
         tout le run (``WebFetch.browser``) — aucun nouveau processus Firefox
-        n'est lancé ici.
+        n'est lancé ici. Le contenu n'est considéré chargé qu'une fois
+        stabilisé (voir ``_wait_for_content``) ; une page qui n'atteint
+        jamais ce seuil déclenche une nouvelle tentative de navigation
+        plutôt que d'être retournée incomplète.
 
         Args:
             url: URL à charger.
             profileName: Ignoré pour Firefox, conservé pour compatibilité.
             isVar: Si True, clique sur le bouton de navigation variation.
+            pageKind: Type de page ciblé, détermine le sélecteur de
+                stabilisation utilisé (voir ``_PAGE_KIND_SELECTORS``).
 
         Returns:
             HTML de la page, ou None en cas d'échec après 3 tentatives.
@@ -798,21 +965,24 @@ class WebFetch:
                 "être appelé dans un bloc `with ChessableFetcher():`"
             )
 
+        css_selector, extra_selector = _PAGE_KIND_SELECTORS[pageKind]
+
         for retry in range(3):
             try:
                 browser.get(url)
-                _css = (
-                    By.CSS_SELECTOR,
-                    "div.chapter, div.variation-card__row--main, div#controls",
+
+                stabilized = WebFetch._wait_for_content(
+                    browser, css_selector, extra_selector
                 )
-                try:
-                    WebDriverWait(browser, 15).until(
-                        EC.presence_of_element_located(_css)
-                    )
-                except Exception:
-                    time.sleep(2)
 
                 _assert_not_redirected(browser, url)
+
+                if not stabilized:
+                    print(
+                        f"-- contenu non stabilisé pour <{url}> après 20s"
+                        f" — nouvelle tentative {retry + 1}/3"
+                    )
+                    continue
 
                 if isVar:
                     controls = browser.find_element(By.ID, "controls")

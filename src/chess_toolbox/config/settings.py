@@ -1,6 +1,7 @@
 """Configuration typée du projet, chargée depuis l'environnement et `.env`."""
 
 import enum
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,8 +33,8 @@ class Settings(BaseSettings):
     firefox_binary_path: str = ""
     firefox_automation_profile_dir: str = "C:/tools/firefox-automation-profile"
     geckodriver_path: str = ""
-    chessable_html_cache: str = "./html/"
-    chessable_pgn_cache: str = "./pgn/"
+    chessable_html_cache: Path = Path("./html")
+    chessable_pgn_cache: Path = Path("./pgn")
     chessable_window_mode: WindowMode = WindowMode.OFFSCREEN
 
 

@@ -413,7 +413,7 @@ class TestWriteCoursePgnFile:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode non-incrémental, le fichier est (ré)écrit intégralement."""
-        monkeypatch.setattr(settings, "chessable_pgn_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_pgn_cache", tmp_path)
         Pgn.writeCoursePgnFile("118788", "first content", incremental=False)
         Pgn.writeCoursePgnFile("118788", "second content", incremental=False)
         content = (tmp_path / "course" / "118788.pgn").read_text(encoding="utf-8")
@@ -423,7 +423,7 @@ class TestWriteCoursePgnFile:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """En mode incrémental, chaque écriture complète le fichier existant."""
-        monkeypatch.setattr(settings, "chessable_pgn_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_pgn_cache", tmp_path)
         Pgn.writeCoursePgnFile("118788", "first ", incremental=False)
         Pgn.writeCoursePgnFile("118788", "second", incremental=True)
         content = (tmp_path / "course" / "118788.pgn").read_text(encoding="utf-8")
@@ -437,7 +437,7 @@ class TestWriteVariationPgnFile:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Le fichier PGN de la variation est écrit sous `variation/<id>.pgn`."""
-        monkeypatch.setattr(settings, "chessable_pgn_cache", str(tmp_path) + "/")
+        monkeypatch.setattr(settings, "chessable_pgn_cache", tmp_path)
         Pgn.writeVariationPgnFile("12345", "pgn content")
         content = (tmp_path / "variation" / "12345.pgn").read_text(encoding="utf-8")
         assert content == "pgn content"
