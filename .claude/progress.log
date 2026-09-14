@@ -743,3 +743,10 @@ plan de modernisation) : comparaison d'URL comme signal primaire,
   - tests/unit/test_web_fetch.py
 
 ---
+
+## Session du 2026-09-14 21:06 — chess_toolbox
+
+**Fichiers modifiés :**
+  - docs/code/conf.py
+
+---
