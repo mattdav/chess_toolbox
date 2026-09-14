@@ -41,6 +41,10 @@ extensions = [
 # Docstrings au format Google (cf. CONTRIBUTING.md)
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
+# Émet les attributs de section "Attributes:" comme champs :ivar: plutôt que
+# comme directives .. attribute:: séparées, pour éviter les doublons avec
+# autodoc qui documente déjà ces mêmes attributs depuis les annotations de classe.
+napoleon_use_ivar = True
 
 templates_path = ["_templates"]
 exclude_patterns = []
