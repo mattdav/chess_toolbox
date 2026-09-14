@@ -91,11 +91,12 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os.path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlsplit</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">BeautifulSoup</span><span class="p">,</span> <span class="n">NavigableString</span><span class="p">,</span> <span class="n">Tag</span>
@@ -249,15 +250,26 @@
 <span class="sd">    Signal primaire de détection d'une session expirée (voir</span>
 <span class="sd">    SPEC-session-chessable) : indépendant de la langue ou du contenu textuel</span>
 <span class="sd">    de la page, contrairement à une détection par titre ou par marqueur HTML.</span>
+<span class="sd">    Seuls le schéma, l'hôte et le chemin sont comparés (slash final ignoré) :</span>
+<span class="sd">    une fois la page montée, le lecteur Chessable installe un fragment de</span>
+<span class="sd">    routage (ex. ``#/1/b``) et peut ajouter une query string, ni l'un ni</span>
+<span class="sd">    l'autre ne relevant d'une redirection de session.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        browser: Instance Selenium juste après un ``browser.get(expected_url)``.</span>
 <span class="sd">        expected_url: URL demandée.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ChessableAuthError: Si l'URL obtenue diffère de celle demandée.</span>
+<span class="sd">        ChessableAuthError: Si le schéma, l'hôte ou le chemin obtenu diffère</span>
+<span class="sd">            de celui demandé.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">browser</span><span class="o">.</span><span class="n">current_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">):</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">browser</span><span class="o">.</span><span class="n">current_url</span><span class="p">)</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">expected_url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">scheme</span><span class="p">,</span> <span class="n">current</span><span class="o">.</span><span class="n">netloc</span><span class="p">,</span> <span class="n">current</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span> <span class="o">!=</span> <span class="p">(</span>
+        <span class="n">expected</span><span class="o">.</span><span class="n">scheme</span><span class="p">,</span>
+        <span class="n">expected</span><span class="o">.</span><span class="n">netloc</span><span class="p">,</span>
+        <span class="n">expected</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">),</span>
+    <span class="p">):</span>
         <span class="k">raise</span> <span class="n">ChessableAuthError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"Session Chessable invalide ou expirée : &lt;</span><span class="si">{</span><span class="n">expected_url</span><span class="si">}</span><span class="s2">&gt; a été "</span>
             <span class="sa">f</span><span class="s2">"redirigé vers &lt;</span><span class="si">{</span><span class="n">browser</span><span class="o">.</span><span class="n">current_url</span><span class="si">}</span><span class="s2">&gt;. Relancez "</span>
@@ -437,6 +449,23 @@
 
 
 
+<span class="c1">#: Type de page Chessable ciblé par un fetch — détermine le sélecteur CSS</span>
+<span class="c1">#: utilisé pour juger le contenu "chargé" dans `loadHtmlFromWeb`.</span>
+<span class="n">PageKind</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"course"</span><span class="p">,</span> <span class="s2">"chapter"</span><span class="p">,</span> <span class="s2">"variation"</span><span class="p">]</span>
+
+<span class="c1"># Sélecteur CSS dont on stabilise le nombre de correspondances par type de</span>
+<span class="c1"># page, et sélecteur additionnel devant aussi être présent (None si aucun).</span>
+<span class="c1"># Remplace l'ancien sélecteur générique par OR</span>
+<span class="c1"># ("div.chapter, div.variation-card__row--main, div#controls"), qui était</span>
+<span class="c1"># satisfait par le premier élément apparu alors que la liste continuait de</span>
+<span class="c1"># se peupler.</span>
+<span class="n">_PAGE_KIND_SELECTORS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">PageKind</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"course"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"div.chapter"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+    <span class="s2">"chapter"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"div.variation-card__row--main"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+    <span class="s2">"variation"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"#theOpeningMoves"</span><span class="p">,</span> <span class="s2">"#inputFEN"</span><span class="p">),</span>
+<span class="p">}</span>
+
+
 <div class="viewcode-block" id="WebFetch">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">WebFetch</span><span class="p">:</span>
@@ -492,8 +521,14 @@
     <span class="nd">@beartype</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">getChapterDetail</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterBs</span><span class="p">:</span> <span class="n">Tag</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Récupère la page HTML d'un chapitre et ses variations.</span>
+
+<span class="sd">        Si l'oracle ``div.variationStats`` de la page cours indique un nombre</span>
+<span class="sd">        de variations attendu supérieur au nombre trouvé, retente le fetch</span>
+<span class="sd">        réseau (en forçant le contournement du cache) jusqu'à 3 tentatives au</span>
+<span class="sd">        total, y compris quand le HTML provenait du cache — un cache déjà</span>
+<span class="sd">        incomplet s'auto-corrige ainsi au prochain run.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            courseId: Identifiant du cours Chessable.</span>
@@ -501,16 +536,38 @@
 <span class="sd">            profileName: Profil navigateur à utiliser.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Tuple ``(page chapitre, tags variation)``.</span>
+<span class="sd">            Tuple ``(page chapitre, tags variation, nombre de variations</span>
+<span class="sd">            attendu)``. Le troisième élément est None si l'oracle est absent ou</span>
+<span class="sd">            illisible.</span>
 <span class="sd">        """</span>
         <span class="n">href</span> <span class="o">=</span> <span class="n">_attr_str</span><span class="p">(</span>
             <span class="n">_as_tag</span><span class="p">(</span><span class="n">chapterBs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">href</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="s2">"lien du chapitre"</span><span class="p">),</span> <span class="s2">"href"</span>
         <span class="p">)</span>
         <span class="n">tags</span> <span class="o">=</span> <span class="n">href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
         <span class="n">chapterID</span> <span class="o">=</span> <span class="n">tags</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">expected</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterExpectedCount</span><span class="p">(</span><span class="n">chapterBs</span><span class="p">)</span>
+
         <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterHtml</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterID</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
         <span class="n">variations</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterVariations</span><span class="p">(</span><span class="n">bs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">bs</span><span class="p">,</span> <span class="n">variations</span></div>
+
+        <span class="n">attempts</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="p">(</span>
+            <span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">variations</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">expected</span>
+            <span class="ow">and</span> <span class="n">attempts</span> <span class="o">&lt;</span> <span class="mi">3</span>
+            <span class="ow">and</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">!=</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NONE</span>
+        <span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"-- chapitre </span><span class="si">{</span><span class="n">chapterID</span><span class="si">}</span><span class="s2"> incomplet (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">variations</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">" variations) — nouvelle tentative </span><span class="si">{</span><span class="n">attempts</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/3"</span>
+            <span class="p">)</span>
+            <span class="n">bs</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterHtml</span><span class="p">(</span>
+                <span class="n">courseId</span><span class="p">,</span> <span class="n">chapterID</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">forceFetch</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            <span class="n">variations</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterVariations</span><span class="p">(</span><span class="n">bs</span><span class="p">)</span>
+            <span class="n">attempts</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">bs</span><span class="p">,</span> <span class="n">variations</span><span class="p">,</span> <span class="n">expected</span></div>
 
 
 <div class="viewcode-block" id="WebFetch.getCourseChapters">
@@ -585,6 +642,34 @@
         <span class="k">return</span> <span class="n">title</span><span class="o">.</span><span class="n">text</span></div>
 
 
+<div class="viewcode-block" id="WebFetch.getChapterExpectedCount">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterExpectedCount">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="nd">@beartype</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getChapterExpectedCount</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">chapterTag</span><span class="p">:</span> <span class="n">Tag</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Lit le nombre de variations attendu d'un chapitre (oracle variationStats).</span>
+
+<span class="sd">        Chaque tag ``div.chapter`` contient un ``div.variationStats`` dont</span>
+<span class="sd">        le texte indique ``"&lt;trouvées&gt;/&lt;attendues&gt; variations"`` (ou au</span>
+<span class="sd">        singulier ``"1/1 variation"``). Ce compte sert d'oracle fiable pour</span>
+<span class="sd">        détecter une extraction incomplète.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            chapterTag: Tag ``div.chapter``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Le nombre de variations attendu, ou None si le marqueur est absent</span>
+<span class="sd">            ou son contenu illisible. Ne lève jamais d'exception.</span>
+<span class="sd">        """</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">chapterTag</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"div"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">"variationStats"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="n">Tag</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(\d+)\s*/\s*(\d+)"</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span></div>
+
+
 <div class="viewcode-block" id="WebFetch.getVariationDetailFromTag">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getVariationDetailFromTag">[docs]</a>
     <span class="nd">@classmethod</span>
@@ -651,7 +736,12 @@
 <span class="sd">            Page HTML de la variation, ou None en cas d'échec.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span>
-            <span class="s2">"variation"</span><span class="p">,</span> <span class="n">variationId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="s2">"course/"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">courseId</span><span class="p">),</span> <span class="kc">True</span>
+            <span class="s2">"variation"</span><span class="p">,</span>
+            <span class="n">variationId</span><span class="p">,</span>
+            <span class="n">profileName</span><span class="p">,</span>
+            <span class="s2">"course/"</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">courseId</span><span class="p">),</span>
+            <span class="kc">True</span><span class="p">,</span>
+            <span class="n">pageKind</span><span class="o">=</span><span class="s2">"variation"</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -702,7 +792,7 @@
     <span class="nd">@classmethod</span>
     <span class="nd">@beartype</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">getChapterHtml</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">forceFetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Récupère (cache ou réseau) la page HTML d'un chapitre.</span>
 
@@ -710,11 +800,18 @@
 <span class="sd">            courseId: Identifiant du cours parent.</span>
 <span class="sd">            chapterId: Identifiant du chapitre.</span>
 <span class="sd">            profileName: Profil navigateur à utiliser.</span>
+<span class="sd">            forceFetch: Si True, force un fetch réseau même si un cache existe.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Page HTML du chapitre, ou None en cas d'échec.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span><span class="s2">"course"</span><span class="p">,</span> <span class="n">courseId</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">chapterId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span>
+            <span class="s2">"course"</span><span class="p">,</span>
+            <span class="n">courseId</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">chapterId</span><span class="p">,</span>
+            <span class="n">profileName</span><span class="p">,</span>
+            <span class="n">forceFetch</span><span class="o">=</span><span class="n">forceFetch</span><span class="p">,</span>
+            <span class="n">pageKind</span><span class="o">=</span><span class="s2">"chapter"</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="WebFetch.getCourseHtml">
@@ -731,7 +828,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Page HTML du cours, ou None en cas d'échec.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span><span class="s2">"course"</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getHtml</span><span class="p">(</span><span class="s2">"course"</span><span class="p">,</span> <span class="n">courseId</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">pageKind</span><span class="o">=</span><span class="s2">"course"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="WebFetch.getHtml">
@@ -745,6 +842,8 @@
         <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">fileroot</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
         <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">forceFetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pageKind</span><span class="p">:</span> <span class="n">PageKind</span> <span class="o">=</span> <span class="s2">"course"</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Récupère du HTML Chessable, depuis le cache local ou le réseau.</span>
 
@@ -758,6 +857,12 @@
 <span class="sd">            profileName: Profil navigateur à utiliser.</span>
 <span class="sd">            fileroot: Préfixe de chemin pour le cache (ex: ``"course/&lt;id&gt;"``).</span>
 <span class="sd">            isVar: Si True, l'élément est une variation (navigation spécifique).</span>
+<span class="sd">            forceFetch: Si True, force un fetch réseau même en mode</span>
+<span class="sd">                ``FETCH_NEW``/``FETCH_NONE`` — piloté par l'appelant plutôt</span>
+<span class="sd">                que par le mode global.</span>
+<span class="sd">            pageKind: Type de page ciblé (``"course"``, ``"chapter"``,</span>
+<span class="sd">                ``"variation"``), détermine le sélecteur de stabilisation</span>
+<span class="sd">                utilisé lors du fetch réseau.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTML parsé en ``BeautifulSoup``, ou None en cas d'échec ou de</span>
@@ -770,11 +875,12 @@
         <span class="k">if</span> <span class="n">fileroot</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
             <span class="n">location</span> <span class="o">=</span> <span class="n">fileroot</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">location</span>
 
-        <span class="k">if</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">==</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_ALL</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">forceFetch</span> <span class="ow">or</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">==</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_ALL</span><span class="p">:</span>
             <span class="c1"># session invalide -&gt; ChessableAuthError levée par loadHtmlFromWeb,</span>
             <span class="c1"># aucun contenu de page publique ne peut donc atteindre ce point</span>
-            <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
-            <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
+            <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">,</span> <span class="n">pageKind</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pageHtml</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">loadHtmlFromFile</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">_is_public_page</span><span class="p">(</span><span class="n">pageHtml</span><span class="p">):</span>
@@ -789,14 +895,17 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">pageHtml</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">doFetch</span> <span class="o">==</span> <span class="n">FetchMode</span><span class="o">.</span><span class="n">FETCH_NONE</span><span class="p">:</span>
                     <span class="k">return</span> <span class="kc">None</span>
-                <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
-                <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
+                <span class="n">pageHtml</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_fetchHtml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">,</span> <span class="n">pageKind</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">pageHtml</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">WebFetch</span><span class="o">.</span><span class="n">writeHtmlToFile</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">pageHtml</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">pageHtml</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">pageHtml</span><span class="p">,</span> <span class="s2">"html.parser"</span><span class="p">)</span></div>
 
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_fetchHtml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fetchHtml</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">pageKind</span><span class="p">:</span> <span class="n">PageKind</span> <span class="o">=</span> <span class="s2">"course"</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Charge une page Chessable via Firefox Selenium.</span>
 
 <span class="sd">        Utilise le profil persistant (FIREFOX_AUTOMATION_PROFILE_DIR) qui</span>
@@ -806,11 +915,12 @@
 <span class="sd">            url: URL à charger.</span>
 <span class="sd">            profileName: Ignoré pour Firefox, conservé pour compatibilité.</span>
 <span class="sd">            isVar: Si True, clique sur le bouton de navigation variation.</span>
+<span class="sd">            pageKind: Type de page ciblé, transmis à ``loadHtmlFromWeb``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTML de la page, ou None en cas d'échec.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">loadHtmlFromWeb</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">loadHtmlFromWeb</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">profileName</span><span class="p">,</span> <span class="n">isVar</span><span class="p">,</span> <span class="n">pageKind</span><span class="p">)</span>
 
 <div class="viewcode-block" id="WebFetch.loadHtmlFromFile">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromFile">[docs]</a>
@@ -825,11 +935,10 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Contenu du fichier, ou chaîne vide si absent du cache.</span>
 <span class="sd">        """</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="s2">".html"</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">.html"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">return</span> <span class="s2">""</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="WebFetch.writeHtmlToFile">
@@ -843,15 +952,12 @@
 <span class="sd">            location: Chemin relatif (sans extension) sous le cache HTML.</span>
 <span class="sd">            content: Contenu à écrire, ou None si rien n'a été récupéré.</span>
 <span class="sd">        """</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span><span class="p">[:</span> <span class="n">location</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)])</span>
-        <span class="n">path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
-            <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="s2">".html"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span>
-        <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">"-- returned no content from web"</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></div>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">.html"</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"-- returned no content from web"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span></div>
 
 
     <span class="nd">@classmethod</span>
@@ -902,23 +1008,87 @@
             <span class="n">browser</span><span class="o">.</span><span class="n">set_window_position</span><span class="p">(</span><span class="o">-</span><span class="mi">32000</span><span class="p">,</span> <span class="o">-</span><span class="mi">32000</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">browser</span>
 
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wait_for_content</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">browser</span><span class="p">:</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">Firefox</span><span class="p">,</span>
+        <span class="n">css_selector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">extra_selector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Attend que le contenu ciblé par ``css_selector`` se stabilise.</span>
+
+<span class="sd">        Interroge le nombre d'éléments correspondants toutes les ~300ms.</span>
+<span class="sd">        Contrairement à ``EC.presence_of_element_located`` (satisfait dès le</span>
+<span class="sd">        premier élément apparu), cette attente ne conclut au chargement</span>
+<span class="sd">        complet qu'une fois le compte non nul et stable pendant 1.5s</span>
+<span class="sd">        d'affilée, plafonné à 20s au total.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            browser: Instance Selenium sur laquelle interroger le DOM.</span>
+<span class="sd">            css_selector: Sélecteur dont on stabilise le nombre de</span>
+<span class="sd">                correspondances.</span>
+<span class="sd">            extra_selector: Sélecteur additionnel qui doit aussi avoir au</span>
+<span class="sd">                moins une correspondance, ou None si aucune vérification</span>
+<span class="sd">                supplémentaire n'est nécessaire.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True si un contenu stable et non vide a été observé avant le</span>
+<span class="sd">            délai de 20s (ou si au moins un élément était présent au moment</span>
+<span class="sd">            du délai sans y être resté stable), False si aucun élément n'a</span>
+<span class="sd">            jamais été trouvé.</span>
+<span class="sd">        """</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="mf">20.0</span>
+        <span class="n">poll_interval</span> <span class="o">=</span> <span class="mf">0.3</span>
+        <span class="n">stable_duration</span> <span class="o">=</span> <span class="mf">1.5</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout</span>
+        <span class="n">last_count</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">stable_since</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">while</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">deadline</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">browser</span><span class="o">.</span><span class="n">find_elements</span><span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="n">css_selector</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">extra_selector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">browser</span><span class="o">.</span><span class="n">find_elements</span><span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span> <span class="n">extra_selector</span><span class="p">):</span>
+                    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">!=</span> <span class="n">last_count</span><span class="p">:</span>
+                <span class="n">last_count</span> <span class="o">=</span> <span class="n">count</span>
+                <span class="n">stable_since</span> <span class="o">=</span> <span class="n">now</span>
+            <span class="k">elif</span> <span class="p">(</span>
+                <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                <span class="ow">and</span> <span class="n">stable_since</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">now</span> <span class="o">-</span> <span class="n">stable_since</span> <span class="o">&gt;=</span> <span class="n">stable_duration</span>
+            <span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll_interval</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">last_count</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
 <div class="viewcode-block" id="WebFetch.loadHtmlFromWeb">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.web_fetch.html#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromWeb">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="nd">@beartype</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">loadHtmlFromWeb</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">isVar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pageKind</span><span class="p">:</span> <span class="n">PageKind</span> <span class="o">=</span> <span class="s2">"course"</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Charge une page Chessable et retourne son HTML.</span>
 
 <span class="sd">        Réutilise le navigateur partagé ouvert par ``ChessableFetcher`` pour</span>
 <span class="sd">        tout le run (``WebFetch.browser``) — aucun nouveau processus Firefox</span>
-<span class="sd">        n'est lancé ici.</span>
+<span class="sd">        n'est lancé ici. Le contenu n'est considéré chargé qu'une fois</span>
+<span class="sd">        stabilisé (voir ``_wait_for_content``) ; une page qui n'atteint</span>
+<span class="sd">        jamais ce seuil déclenche une nouvelle tentative de navigation</span>
+<span class="sd">        plutôt que d'être retournée incomplète.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            url: URL à charger.</span>
 <span class="sd">            profileName: Ignoré pour Firefox, conservé pour compatibilité.</span>
 <span class="sd">            isVar: Si True, clique sur le bouton de navigation variation.</span>
+<span class="sd">            pageKind: Type de page ciblé, détermine le sélecteur de</span>
+<span class="sd">                stabilisation utilisé (voir ``_PAGE_KIND_SELECTORS``).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTML de la page, ou None en cas d'échec après 3 tentatives.</span>
@@ -936,21 +1106,24 @@
                 <span class="s2">"être appelé dans un bloc `with ChessableFetcher():`"</span>
             <span class="p">)</span>
 
+        <span class="n">css_selector</span><span class="p">,</span> <span class="n">extra_selector</span> <span class="o">=</span> <span class="n">_PAGE_KIND_SELECTORS</span><span class="p">[</span><span class="n">pageKind</span><span class="p">]</span>
+
         <span class="k">for</span> <span class="n">retry</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">browser</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-                <span class="n">_css</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">By</span><span class="o">.</span><span class="n">CSS_SELECTOR</span><span class="p">,</span>
-                    <span class="s2">"div.chapter, div.variation-card__row--main, div#controls"</span><span class="p">,</span>
+
+                <span class="n">stabilized</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">_wait_for_content</span><span class="p">(</span>
+                    <span class="n">browser</span><span class="p">,</span> <span class="n">css_selector</span><span class="p">,</span> <span class="n">extra_selector</span>
                 <span class="p">)</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">WebDriverWait</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span><span class="o">.</span><span class="n">until</span><span class="p">(</span>
-                        <span class="n">EC</span><span class="o">.</span><span class="n">presence_of_element_located</span><span class="p">(</span><span class="n">_css</span><span class="p">)</span>
-                    <span class="p">)</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
                 <span class="n">_assert_not_redirected</span><span class="p">(</span><span class="n">browser</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">stabilized</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"-- contenu non stabilisé pour &lt;</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&gt; après 20s"</span>
+                        <span class="sa">f</span><span class="s2">" — nouvelle tentative </span><span class="si">{</span><span class="n">retry</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/3"</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
 
                 <span class="k">if</span> <span class="n">isVar</span><span class="p">:</span>
                     <span class="n">controls</span> <span class="o">=</span> <span class="n">browser</span><span class="o">.</span><span class="n">find_element</span><span class="p">(</span><span class="n">By</span><span class="o">.</span><span class="n">ID</span><span class="p">,</span> <span class="s2">"controls"</span><span class="p">)</span>

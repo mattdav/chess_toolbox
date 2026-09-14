@@ -95,6 +95,49 @@ Version: 0.3
 Description: Entry point and main workflow driver for the application</p>
 <p>License: MIT License
 Contact: <a class="reference external" href="mailto:chess&#37;&#52;&#48;demastri&#46;com">chess<span>&#64;</span>demastri<span>&#46;</span>com</a></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.core.</span></span><span class="sig-name descname"><span class="pre">ChapterResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">soup</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/core.html#ChapterResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Résultat du traitement d’un chapitre.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>soup</strong> – Page HTML du chapitre, ou None si non disponible.</p></li>
+<li><p><strong>variations</strong> – Tags des variations trouvées.</p></li>
+<li><p><strong>expected</strong> – Nombre de variations attendu (oracle <code class="docutils literal notranslate"><span class="pre">variationStats</span></code>),
+ou None si absent ou illisible.</p></li>
+<li><p><strong>name</strong> – Titre du chapitre.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">soup</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.expected">
+<span class="sig-name descname"><span class="pre">expected</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.expected" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.soup">
+<span class="sig-name descname"><span class="pre">soup</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">BeautifulSoup</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.soup" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.variations">
+<span class="sig-name descname"><span class="pre">variations</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult.variations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.core.generateCoursePGNs">
 <span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.core.</span></span><span class="sig-name descname"><span class="pre">generateCoursePGNs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variationResults</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/core.html#generateCoursePGNs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.core.generateCoursePGNs" title="Link to this definition"></a></dt>
@@ -127,10 +170,10 @@ Contact: <a class="reference external" href="mailto:chess&#37;&#52;&#48;demastri
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult" title="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChapterResult</span></code></a>]</span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Liste de <code class="docutils literal notranslate"><span class="pre">[page</span> <span class="pre">chapitre,</span> <span class="pre">tags</span> <span class="pre">variation]</span></code> par chapitre traité.</p>
+<dd class="field-odd"><p>Liste de <code class="docutils literal notranslate"><span class="pre">ChapterResult</span></code> par chapitre traité.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -160,7 +203,7 @@ Contact: <a class="reference external" href="mailto:chess&#37;&#52;&#48;demastri
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>courseId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du cours Chessable.</p></li>
-<li><p><strong>chapterResults</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span>) – Liste de <code class="docutils literal notranslate"><span class="pre">[page</span> <span class="pre">chapitre,</span> <span class="pre">tags</span> <span class="pre">variation]</span></code> par chapitre.</p></li>
+<li><p><strong>chapterResults</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult" title="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChapterResult</span></code></a>]</span>) – Liste de <code class="docutils literal notranslate"><span class="pre">ChapterResult</span></code> par chapitre.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -215,10 +258,10 @@ Contact: <a class="reference external" href="mailto:chess&#37;&#52;&#48;demastri
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#chess_toolbox.bin.chessable_to_pgn.core.ChapterResult" title="chess_toolbox.bin.chessable_to_pgn.core.ChapterResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChapterResult</span></code></a></span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Liste <code class="docutils literal notranslate"><span class="pre">[page</span> <span class="pre">chapitre,</span> <span class="pre">tags</span> <span class="pre">variation]</span></code>.</p>
+<dd class="field-odd"><p>Résultat du traitement du chapitre.</p>
 </dd>
 </dl>
 </dd></dl>

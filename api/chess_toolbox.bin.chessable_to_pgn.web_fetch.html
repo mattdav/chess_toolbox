@@ -145,6 +145,14 @@ chaque fetch HTML, puis la ferme à la sortie du bloc.</p>
 
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.PageKind">
+<span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.web_fetch.</span></span><span class="sig-name descname"><span class="pre">PageKind</span></span><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.PageKind" title="Link to this definition"></a></dt>
+<dd><p>Type de page Chessable ciblé par un fetch — détermine le sélecteur CSS
+utilisé pour juger le contenu “chargé” dans <cite>loadHtmlFromWeb</cite>.</p>
+<p>alias of <code class="xref py py-obj docutils literal notranslate"><span class="pre">Literal</span></code>[‘course’, ‘chapter’, ‘variation’]</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chess_toolbox.bin.chessable_to_pgn.web_fetch.</span></span><span class="sig-name descname"><span class="pre">WebFetch</span></span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch" title="Link to this definition"></a></dt>
@@ -192,6 +200,11 @@ fetch courant, <code class="docutils literal notranslate"><span class="pre">doFe
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterDetail">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getChapterDetail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chapterBs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getChapterDetail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterDetail" title="Link to this definition"></a></dt>
 <dd><p>Récupère la page HTML d’un chapitre et ses variations.</p>
+<p>Si l’oracle <code class="docutils literal notranslate"><span class="pre">div.variationStats</span></code> de la page cours indique un nombre
+de variations attendu supérieur au nombre trouvé, retente le fetch
+réseau (en forçant le contournement du cache) jusqu’à 3 tentatives au
+total, y compris quand le HTML provenait du cache — un cache déjà
+incomplet s’auto-corrige ainsi au prochain run.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -201,17 +214,41 @@ fetch courant, <code class="docutils literal notranslate"><span class="pre">doFe
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">BeautifulSoup</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">BeautifulSoup</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]</span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Tuple <code class="docutils literal notranslate"><span class="pre">(page</span> <span class="pre">chapitre,</span> <span class="pre">tags</span> <span class="pre">variation)</span></code>.</p>
+<dd class="field-odd"><p>Tuple <code class="docutils literal notranslate"><span class="pre">(page</span> <span class="pre">chapitre,</span> <span class="pre">tags</span> <span class="pre">variation,</span> <span class="pre">nombre</span> <span class="pre">de</span> <span class="pre">variations</span>
+<span class="pre">attendu)</span></code>. Le troisième élément est None si l’oracle est absent ou
+illisible.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterExpectedCount">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getChapterExpectedCount</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chapterTag</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getChapterExpectedCount"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterExpectedCount" title="Link to this definition"></a></dt>
+<dd><p>Lit le nombre de variations attendu d’un chapitre (oracle variationStats).</p>
+<p>Chaque tag <code class="docutils literal notranslate"><span class="pre">div.chapter</span></code> contient un <code class="docutils literal notranslate"><span class="pre">div.variationStats</span></code> dont
+le texte indique <code class="docutils literal notranslate"><span class="pre">&quot;&lt;trouvées&gt;/&lt;attendues&gt;</span> <span class="pre">variations&quot;</span></code> (ou au
+singulier <code class="docutils literal notranslate"><span class="pre">&quot;1/1</span> <span class="pre">variation&quot;</span></code>). Ce compte sert d’oracle fiable pour
+détecter une extraction incomplète.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>chapterTag</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tag</span></code></span>) – Tag <code class="docutils literal notranslate"><span class="pre">div.chapter</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Le nombre de variations attendu, ou None si le marqueur est absent
+ou son contenu illisible. Ne lève jamais d’exception.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterHtml">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getChapterHtml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chapterId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getChapterHtml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterHtml" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getChapterHtml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">courseId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chapterId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFetch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getChapterHtml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getChapterHtml" title="Link to this definition"></a></dt>
 <dd><p>Récupère (cache ou réseau) la page HTML d’un chapitre.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -219,6 +256,7 @@ fetch courant, <code class="docutils literal notranslate"><span class="pre">doFe
 <li><p><strong>courseId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du cours parent.</p></li>
 <li><p><strong>chapterId</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifiant du chapitre.</p></li>
 <li><p><strong>profileName</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Profil navigateur à utiliser.</p></li>
+<li><p><strong>forceFetch</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Si True, force un fetch réseau même si un cache existe.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -341,7 +379,7 @@ page n’a pas pu être récupérée.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getHtml">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getHtml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elementType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elementId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fileroot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isVar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getHtml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getHtml" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">getHtml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elementType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elementId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fileroot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isVar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFetch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pageKind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'course'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.getHtml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.getHtml" title="Link to this definition"></a></dt>
 <dd><p>Récupère du HTML Chessable, depuis le cache local ou le réseau.</p>
 <p>Le comportement dépend de <code class="docutils literal notranslate"><span class="pre">WebFetch.doFetch</span></code> :
 <code class="docutils literal notranslate"><span class="pre">FETCH_ALL</span></code> refetch toujours, <code class="docutils literal notranslate"><span class="pre">FETCH_NEW</span></code> réutilise le cache et
@@ -354,6 +392,12 @@ ne va chercher que le manquant, <code class="docutils literal notranslate"><span
 <li><p><strong>profileName</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Profil navigateur à utiliser.</p></li>
 <li><p><strong>fileroot</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Préfixe de chemin pour le cache (ex: <code class="docutils literal notranslate"><span class="pre">&quot;course/&lt;id&gt;&quot;</span></code>).</p></li>
 <li><p><strong>isVar</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Si True, l’élément est une variation (navigation spécifique).</p></li>
+<li><p><strong>forceFetch</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Si True, force un fetch réseau même en mode
+<code class="docutils literal notranslate"><span class="pre">FETCH_NEW</span></code>/<code class="docutils literal notranslate"><span class="pre">FETCH_NONE</span></code> — piloté par l’appelant plutôt
+que par le mode global.</p></li>
+<li><p><strong>pageKind</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'course'</span></code>, <code class="docutils literal notranslate"><span class="pre">'chapter'</span></code>, <code class="docutils literal notranslate"><span class="pre">'variation'</span></code>]</span>) – Type de page ciblé (<code class="docutils literal notranslate"><span class="pre">&quot;course&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;chapter&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;variation&quot;</span></code>), détermine le sélecteur de stabilisation
+utilisé lors du fetch réseau.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -467,17 +511,22 @@ valeurs vides/None.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromWeb">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">loadHtmlFromWeb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isVar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.loadHtmlFromWeb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromWeb" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">loadHtmlFromWeb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profileName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isVar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pageKind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'course'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/chess_toolbox/bin/chessable_to_pgn/web_fetch.html#WebFetch.loadHtmlFromWeb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chess_toolbox.bin.chessable_to_pgn.web_fetch.WebFetch.loadHtmlFromWeb" title="Link to this definition"></a></dt>
 <dd><p>Charge une page Chessable et retourne son HTML.</p>
 <p>Réutilise le navigateur partagé ouvert par <code class="docutils literal notranslate"><span class="pre">ChessableFetcher</span></code> pour
 tout le run (<code class="docutils literal notranslate"><span class="pre">WebFetch.browser</span></code>) — aucun nouveau processus Firefox
-n’est lancé ici.</p>
+n’est lancé ici. Le contenu n’est considéré chargé qu’une fois
+stabilisé (voir <code class="docutils literal notranslate"><span class="pre">_wait_for_content</span></code>) ; une page qui n’atteint
+jamais ce seuil déclenche une nouvelle tentative de navigation
+plutôt que d’être retournée incomplète.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>url</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – URL à charger.</p></li>
 <li><p><strong>profileName</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Ignoré pour Firefox, conservé pour compatibilité.</p></li>
 <li><p><strong>isVar</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Si True, clique sur le bouton de navigation variation.</p></li>
+<li><p><strong>pageKind</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'course'</span></code>, <code class="docutils literal notranslate"><span class="pre">'chapter'</span></code>, <code class="docutils literal notranslate"><span class="pre">'variation'</span></code>]</span>) – Type de page ciblé, détermine le sélecteur de
+stabilisation utilisé (voir <code class="docutils literal notranslate"><span class="pre">_PAGE_KIND_SELECTORS</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>

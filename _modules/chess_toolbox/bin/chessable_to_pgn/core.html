@@ -81,6 +81,7 @@
 <span class="sd">Contact: chess@demastri.com</span>
 <span class="sd">"""</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
@@ -89,9 +90,30 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">command_line</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.pgn_writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pgn</span><span class="p">,</span> <span class="n">PgnMode</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.web_fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebFetch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.web_fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChessableAuthError</span><span class="p">,</span> <span class="n">WebFetch</span>
 
 <span class="n">profileIds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<div class="viewcode-block" id="ChapterResult">
+<a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.ChapterResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChapterResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Résultat du traitement d'un chapitre.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        soup: Page HTML du chapitre, ou None si non disponible.</span>
+<span class="sd">        variations: Tags des variations trouvées.</span>
+<span class="sd">        expected: Nombre de variations attendu (oracle ``variationStats``),</span>
+<span class="sd">            ou None si absent ou illisible.</span>
+<span class="sd">        name: Titre du chapitre.</span>
+<span class="sd">    """</span>
+
+    <span class="n">soup</span><span class="p">:</span> <span class="n">BeautifulSoup</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">variations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
+    <span class="n">expected</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span></div>
+
 
 
 <div class="viewcode-block" id="main">
@@ -165,28 +187,80 @@
         <span class="nb">print</span><span class="p">(</span><span class="s2">"----------"</span><span class="p">)</span>
 
         <span class="n">chapterResults</span> <span class="o">=</span> <span class="n">loadChapterInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapters</span><span class="p">)</span>
+
+        <span class="n">incompleteChapters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">chapterResult</span> <span class="ow">in</span> <span class="n">chapterResults</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">chapterResult</span><span class="o">.</span><span class="n">expected</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chapterResult</span><span class="o">.</span><span class="n">variations</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="o">&lt;</span> <span class="n">chapterResult</span><span class="o">.</span><span class="n">expected</span><span class="p">:</span>
+                <span class="n">incompleteChapters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">chapterResult</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">found</span><span class="p">,</span> <span class="n">chapterResult</span><span class="o">.</span><span class="n">expected</span><span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="n">failedVariations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">variationsExtracted</span> <span class="o">=</span> <span class="mi">0</span>
+
         <span class="c1"># once we have the chapter details, we can load all of the variation htmls</span>
         <span class="k">if</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">==</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_INCREMENTAL</span><span class="p">:</span>
             <span class="n">appendToFile</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chapterResults</span><span class="p">)):</span>
-                <span class="n">bset</span><span class="p">,</span> <span class="n">vset</span> <span class="o">=</span> <span class="n">chapterResults</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">vset</span> <span class="o">=</span> <span class="n">chapterResults</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">variations</span>
                 <span class="c1"># get each variation individually</span>
                 <span class="k">for</span> <span class="n">vi</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vset</span><span class="p">)):</span>
-                    <span class="n">thisVarDet</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromTag</span><span class="p">(</span>
-                        <span class="n">courseId</span><span class="p">,</span> <span class="n">vset</span><span class="p">[</span><span class="n">vi</span><span class="p">],</span> <span class="s2">"Default"</span>
-                    <span class="p">)</span>
-                    <span class="n">thisVarDet</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">vi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-                    <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="p">[</span><span class="n">thisVarDet</span><span class="p">])</span>
-                    <span class="n">Pgn</span><span class="o">.</span><span class="n">writeCoursePgnFile</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">,</span> <span class="n">appendToFile</span><span class="p">)</span>
-                    <span class="n">appendToFile</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">variationLabel</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">vi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">thisVarDet</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromTag</span><span class="p">(</span>
+                            <span class="n">courseId</span><span class="p">,</span> <span class="n">vset</span><span class="p">[</span><span class="n">vi</span><span class="p">],</span> <span class="s2">"Default"</span>
+                        <span class="p">)</span>
+                        <span class="n">thisVarDet</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">variationLabel</span><span class="p">)</span>
+                        <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="p">[</span><span class="n">thisVarDet</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="n">pgnOut</span><span class="p">:</span>
+                            <span class="n">Pgn</span><span class="o">.</span><span class="n">writeCoursePgnFile</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">,</span> <span class="n">appendToFile</span><span class="p">)</span>
+                            <span class="n">appendToFile</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="n">variationsExtracted</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">failedVariations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="p">(</span>
+                                    <span class="n">variationLabel</span><span class="p">,</span>
+                                    <span class="s2">"PGN vide (HTML variation non chargé)"</span><span class="p">,</span>
+                                <span class="p">)</span>
+                            <span class="p">)</span>
+                    <span class="k">except</span> <span class="n">ChessableAuthError</span><span class="p">:</span>
+                        <span class="k">raise</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="n">failedVariations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">variationLabel</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)))</span>
         <span class="k">elif</span> <span class="n">Pgn</span><span class="o">.</span><span class="n">doPgn</span> <span class="o">==</span> <span class="n">PgnMode</span><span class="o">.</span><span class="n">PGN_AFTER</span><span class="p">:</span>
             <span class="n">variationResults</span> <span class="o">=</span> <span class="n">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">)</span>
+            <span class="n">variationsExtracted</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">variationResults</span><span class="p">)</span>
             <span class="c1"># now all of the variation htmls are available locally</span>
             <span class="n">pgnOut</span> <span class="o">=</span> <span class="n">generateCoursePGNs</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">variationResults</span><span class="p">)</span>
             <span class="n">Pgn</span><span class="o">.</span><span class="n">writeCoursePgnFile</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">pgnOut</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># still get the html even if we're not doing pgn...</span>
-            <span class="n">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">)</span>
+            <span class="n">variationResults</span> <span class="o">=</span> <span class="n">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">)</span>
+            <span class="n">variationsExtracted</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">variationResults</span><span class="p">)</span>
+
+        <span class="n">totalExpected</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">chapterResult</span> <span class="ow">in</span> <span class="n">chapterResults</span><span class="p">:</span>
+            <span class="n">totalExpected</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="n">chapterResult</span><span class="o">.</span><span class="n">expected</span>
+                <span class="k">if</span> <span class="n">chapterResult</span><span class="o">.</span><span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">chapterResult</span><span class="o">.</span><span class="n">variations</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"--- Cours </span><span class="si">{</span><span class="n">courseId</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">variationsExtracted</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">totalExpected</span><span class="si">}</span><span class="s2">"</span>
+            <span class="s2">" variations extraites"</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">incompleteChapters</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"  - chapitres incomplets :"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">found</span><span class="p">,</span> <span class="n">expected</span> <span class="ow">in</span> <span class="n">incompleteChapters</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'      - "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">" : </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s1"> variations'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">failedVariations</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"  - variations en échec :"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">reason</span> <span class="ow">in</span> <span class="n">failedVariations</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"      - </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s2">"----------"</span><span class="p">)</span>
 
@@ -236,7 +310,7 @@
 <div class="viewcode-block" id="loadChapterInfo">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.loadChapterInfo">[docs]</a>
 <span class="nd">@beartype</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">loadChapterInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">loadChapterInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChapterResult</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Charge le détail HTML de chaque chapitre (jusqu'à 500).</span>
 
 <span class="sd">    Args:</span>
@@ -244,15 +318,15 @@
 <span class="sd">        chapters: Tags chapitre résumés (page cours).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Liste de ``[page chapitre, tags variation]`` par chapitre traité.</span>
+<span class="sd">        Liste de ``ChapterResult`` par chapitre traité.</span>
 <span class="sd">    """</span>
-    <span class="n">chapterResults</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">chapterResults</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChapterResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="n">chaptersRead</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">varsPreviewed</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chapters</span><span class="p">:</span>
         <span class="n">thisResult</span> <span class="o">=</span> <span class="n">processChapter</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">"Default"</span><span class="p">)</span>
-        <span class="n">varsPreviewed</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">thisResult</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">varsPreviewed</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">thisResult</span><span class="o">.</span><span class="n">variations</span><span class="p">)</span>
         <span class="n">chapterResults</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thisResult</span><span class="p">)</span>
         <span class="n">chaptersRead</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">if</span> <span class="n">chaptersRead</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">:</span>
@@ -265,12 +339,12 @@
 <div class="viewcode-block" id="loadVariationInfo">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.loadVariationInfo">[docs]</a>
 <span class="nd">@beartype</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">loadVariationInfo</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chapterResults</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChapterResult</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Charge le détail HTML de chaque variation de chaque chapitre (jusqu'à 5000).</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        courseId: Identifiant du cours Chessable.</span>
-<span class="sd">        chapterResults: Liste de ``[page chapitre, tags variation]`` par chapitre.</span>
+<span class="sd">        chapterResults: Liste de ``ChapterResult`` par chapitre.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Liste de ``[page variation, id variation, round]`` par variation lue.</span>
@@ -280,10 +354,10 @@
     <span class="n">variationsRead</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">chapterNbr</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># used to build round string</span>
     <span class="n">variationNbr</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># used to build round string</span>
-    <span class="k">for</span> <span class="n">_b</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chapterResults</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">chapterResult</span> <span class="ow">in</span> <span class="n">chapterResults</span><span class="p">:</span>
         <span class="n">chapterNbr</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="n">variationNbr</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">variation</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">variation</span> <span class="ow">in</span> <span class="n">chapterResult</span><span class="o">.</span><span class="n">variations</span><span class="p">:</span>
             <span class="n">variationNbr</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="n">thisVarDet</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getVariationDetailFromTag</span><span class="p">(</span>
                 <span class="n">courseId</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="s2">"Default"</span>
@@ -330,7 +404,7 @@
 <div class="viewcode-block" id="processChapter">
 <a class="viewcode-back" href="../../../../api/chess_toolbox.bin.chessable_to_pgn.core.html#chess_toolbox.bin.chessable_to_pgn.processChapter">[docs]</a>
 <span class="nd">@beartype</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">processChapter</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tagStr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">processChapter</span><span class="p">(</span><span class="n">courseId</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tagStr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChapterResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Reparse un tag chapitre et récupère ses variations.</span>
 
 <span class="sd">    Args:</span>
@@ -339,21 +413,26 @@
 <span class="sd">        profileName: Profil navigateur à utiliser.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Liste ``[page chapitre, tags variation]``.</span>
+<span class="sd">        Résultat du traitement du chapitre.</span>
 <span class="sd">    """</span>
     <span class="n">chapter</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">tagStr</span><span class="p">,</span> <span class="s2">"html.parser"</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Parsing '"</span> <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterName</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"' ("</span> <span class="o">+</span> <span class="n">profileName</span> <span class="o">+</span> <span class="s2">") "</span><span class="p">)</span>
-    <span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterDetail</span><span class="p">(</span><span class="n">courseId</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">profileName</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterName</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Parsing '"</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">"' ("</span> <span class="o">+</span> <span class="n">profileName</span> <span class="o">+</span> <span class="s2">") "</span><span class="p">)</span>
+    <span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span><span class="p">,</span> <span class="n">expected</span> <span class="o">=</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterDetail</span><span class="p">(</span>
+        <span class="n">courseId</span><span class="p">,</span> <span class="n">chapter</span><span class="p">,</span> <span class="n">profileName</span>
+    <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s2">" returned  '"</span>
-        <span class="o">+</span> <span class="n">WebFetch</span><span class="o">.</span><span class="n">getChapterName</span><span class="p">(</span><span class="n">chapter</span><span class="p">)</span>
+        <span class="o">+</span> <span class="n">name</span>
         <span class="o">+</span> <span class="s2">"' had ("</span>
         <span class="o">+</span> <span class="n">profileName</span>
         <span class="o">+</span> <span class="s2">") "</span>
         <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">variations</span><span class="p">))</span>
         <span class="o">+</span> <span class="s2">" variations"</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">ChapterResult</span><span class="p">(</span>
+        <span class="n">soup</span><span class="o">=</span><span class="n">chapterBS</span><span class="p">,</span> <span class="n">variations</span><span class="o">=</span><span class="n">variations</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="n">expected</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span>
+    <span class="p">)</span></div>
 
 
 

@@ -81,6 +81,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">beartype</span><span class="w"> </span><span class="kn">import</span> <span class="n">beartype</span>
 
@@ -220,11 +221,11 @@
 
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting pgn root location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
-        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_pgn_cache</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_pgn_cache</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">pgnroot</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting html root location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>
-        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span>
+        <span class="n">settings</span><span class="o">.</span><span class="n">chessable_html_cache</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">htmlroot</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">browserbinary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">"- Setting browser binary location to &lt;"</span> <span class="o">+</span> <span class="n">args</span><span class="o">.</span><span class="n">browserbinary</span> <span class="o">+</span> <span class="s2">"&gt;"</span><span class="p">)</span>

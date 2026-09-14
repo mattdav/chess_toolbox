@@ -72,6 +72,7 @@
 <span></span><span class="sd">"""Configuration typée du projet, chargée depuis l'environnement et `.env`."""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span><span class="p">,</span> <span class="n">SettingsConfigDict</span>
 
@@ -108,8 +109,8 @@
     <span class="n">firefox_binary_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="n">firefox_automation_profile_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"C:/tools/firefox-automation-profile"</span>
     <span class="n">geckodriver_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-    <span class="n">chessable_html_cache</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"./html/"</span>
-    <span class="n">chessable_pgn_cache</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"./pgn/"</span>
+    <span class="n">chessable_html_cache</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"./html"</span><span class="p">)</span>
+    <span class="n">chessable_pgn_cache</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"./pgn"</span><span class="p">)</span>
     <span class="n">chessable_window_mode</span><span class="p">:</span> <span class="n">WindowMode</span> <span class="o">=</span> <span class="n">WindowMode</span><span class="o">.</span><span class="n">OFFSCREEN</span></div>
 
 
